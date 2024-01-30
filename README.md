@@ -5,7 +5,6 @@
 ## Todo List
 
 - [ ] Create Views for 
-  - [ ] Fetch 1 Mcq 📝
   - [ ] Evaluate Mcq + update score 📊
   - [ ] Update submission 🔄
   - [ ] Fetch leaderboard 🏆
