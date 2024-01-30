@@ -6,6 +6,11 @@ from .models import Mcq, Custom_user, Submission, CustomUser
 from .serializers import Mcq_Serializer, Submission_Serializer, UserRegistrationSerializer
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
+from rest_framework.authtoken.models import Token
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 POSTIVE_MARKS_1 = 4
 POSTIVE_MARKS_2 = 2
@@ -29,3 +34,6 @@ def endpoints(request):
     ]
 
     return JsonResponse({'available_endpoints': available_endpoints})
+
+class UserRegisstartion(APIView):
+    pass
