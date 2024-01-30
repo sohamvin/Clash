@@ -4,8 +4,6 @@
 
 ## Todo List
 
-- [ ] Add Models 🛠️
-- [ ] Create Serializers 🧵
 - [ ] Create Views for 
   - [ ] Fetch 1 Mcq 📝
   - [ ] Evaluate Mcq + update score 📊
