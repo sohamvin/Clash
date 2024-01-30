@@ -3,6 +3,12 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, AbstractUser
 from django.db import models
 import uuid
+from rest_framework.authtoken.models import Token
+
+class CustomToken(Token):
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+
 
 class Mcq(models.Model):
     question_id = models.IntegerField(primary_key = True)
@@ -11,7 +17,7 @@ class Mcq(models.Model):
     b = models.CharField(max_length=255, blank=False)
     c = models.CharField(max_length=255, blank=False)
     d = models.CharField(max_length=255, blank=False)
-    correct = models.CharField(max_length=255, blank=False)
+    correct = models.CharField(max_length=255, blank=False, choices=(("a", a), ("b", b), ("c", c), ("d", d) ))
     author = models.CharField(max_length=255, blank=False)
     authors_note = models.CharField(max_length=255, blank=True)
     senior = models.BooleanField(default=False)
