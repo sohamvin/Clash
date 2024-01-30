@@ -14,9 +14,8 @@ from rest_framework import status
 from django.contrib.auth import authenticate
 from datetime import timedelta
 from django.utils import timezone
+from rest_framework.authentication import TokenAuthentication
 
-# Example: Set expiration time to 7 days from now
-expiration_time = timezone.now() + timedelta(seconds=20)
 from django.contrib.auth import get_user_model
 
 
@@ -63,6 +62,8 @@ class UserLoginView(APIView):
             password = ser.validated_data['password']
             user = authenticate(username=username, password=password, request=request)
 
+            expiration_time = timezone.now() + timedelta(seconds=20)
+
             token_obj, _ = CustomToken.objects.get_or_create(user=user)
             token_obj.expires_at = expiration_time
             token_obj.save()
@@ -75,3 +76,36 @@ class UserLoginView(APIView):
             return response
         else:
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GetMCQ(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        token = request.auth
+        user = request.user
+
+        current_id = user.current_question
+
+        mcq = Mcq.objects.get(question_id=current_id)
+
+        if mcq.senior == user.senior_team:
+            ser = Mcq_Serializer(instance=mcq)
+            return Response(ser.data, status=status.HTTP_200_OK)
+            pass
+
+        return Response({"Error": "Connot request question of not your catagory"}, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get the user associated with the token
+        user = request.user
+
+        # Delete the existing token for the user
+        Token.objects.filter(user=user).delete()
+
+        return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
