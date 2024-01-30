@@ -1,6 +1,6 @@
 from typing import Any
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, AbstractUser
 from django.db import models
 import uuid
 
@@ -56,7 +56,7 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(email, password, **extra_fields)
 
-class CustomUser(AbstractBaseUser):
+class CustomUser(AbstractUser):
     team_id = models.CharField(max_length=256, primary_key=True)
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=256, unique=True) # overrided , but must be team name , not username of user
