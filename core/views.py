@@ -86,6 +86,7 @@ class GetMCQ(APIView):
         user = request.user
 
         questions_list_str = user.Questions_to_list
+
         questions_list = questions_list_str.split(',')
         try:
 
@@ -102,7 +103,7 @@ class GetMCQ(APIView):
             ser = Mcq_Serializer(mcq)
             return Response(ser.data, status=status.HTTP_200_OK)
         except:
-            return Response({"Error": "Connot request question of not your catagory"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"Error": "Ran out of questions"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LogoutView(APIView):
