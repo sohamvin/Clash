@@ -15,9 +15,28 @@ from django.contrib.auth import authenticate
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework.authentication import TokenAuthentication
-
 from django.contrib.auth import get_user_model
+import random
 
+senior_objs = Mcq.objects.filter(senior=True)
+junior_objs = Mcq.objects.filter(senior=False)
+
+seniorlist = []
+juniorlist = []
+
+# Process senior objects
+for senior_obj in senior_objs:
+    # Add your processing logic for senior objects
+    seniorlist.append(senior_obj.question_id)
+
+# Process junior objects
+for junior_obj in junior_objs:
+    # Add your processing logic for junior objects
+    juniorlist.append(junior_obj.question_id)
+
+
+
+random_number = random.randint(1, 10)
 
 User = get_user_model()
 
@@ -54,6 +73,7 @@ class UserRegistrationView(APIView):
         return Response({"messege": ser.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 class UserLoginView(APIView):
     def post(self, request):
         ser = UserLoginSerializer(data=request.data)
@@ -72,7 +92,6 @@ class UserLoginView(APIView):
 
             response['Authorization'] = "token " + str(token_obj)
 
-
             return response
         else:
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -84,17 +103,32 @@ class GetMCQ(APIView):
     def get(self, request):
         token = request.auth
         user = request.user
-
         current_id = user.current_question
+        try:
+            seni = user.senior_team
 
-        mcq = Mcq.objects.get(question_id=current_id)
+            qid = 0
 
-        if mcq.senior == user.senior_team:
-            ser = Mcq_Serializer(instance=mcq)
+            if seni:
+                if seniorlist:
+                    qid = random.choice(seniorlist)
+                    seniorlist.remove(qid)
+                else:
+                    qid=-1
+            else:
+                if juniorlist:
+                    qid = random.choice(juniorlist)
+                    juniorlist.remove(qid)
+                else:
+                    qid = -1
+
+            if qid == -1:
+                return Response({"Messege": "Reached End of questions"}, status=status.HTTP_204_NO_CONTENT)
+            mcq = Mcq.objects.get(question_id=qid, senior=user.senior_team)
+            ser = Mcq_Serializer(mcq)
             return Response(ser.data, status=status.HTTP_200_OK)
-            pass
-
-        return Response({"Error": "Connot request question of not your catagory"}, status=status.HTTP_200_OK)
+        except:
+            return Response({"Error": "Connot request question of not your catagory"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LogoutView(APIView):
@@ -109,3 +143,5 @@ class LogoutView(APIView):
         Token.objects.filter(user=user).delete()
 
         return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
+
+
