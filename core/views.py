@@ -18,26 +18,6 @@ from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import get_user_model
 import random
 
-senior_objs = Mcq.objects.filter(senior=True)
-junior_objs = Mcq.objects.filter(senior=False)
-
-seniorlist = []
-juniorlist = []
-
-# Process senior objects
-for senior_obj in senior_objs:
-    # Add your processing logic for senior objects
-    seniorlist.append(senior_obj.question_id)
-
-# Process junior objects
-for junior_obj in junior_objs:
-    # Add your processing logic for junior objects
-    juniorlist.append(junior_obj.question_id)
-
-
-
-random_number = random.randint(1, 10)
-
 User = get_user_model()
 
 POSTIVE_MARKS_1 = 4
@@ -66,9 +46,10 @@ def endpoints(request):
 class UserRegistrationView(APIView):
     def post(self, request):
         ser = UserRegistrationSerializer(data=request.data)
+
         if ser.is_valid():
             ser.save()
-            username = ser.validated_data['username']
+
             return Response({"messge": "Success"}, status=status.HTTP_201_CREATED)
         return Response({"messege": ser.errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -103,27 +84,20 @@ class GetMCQ(APIView):
     def get(self, request):
         token = request.auth
         user = request.user
-        current_id = user.current_question
+
+        questions_list_str = user.Questions_to_list
+        questions_list = questions_list_str.split(',')
         try:
-            seni = user.senior_team
 
-            qid = 0
+            if not questions_list:
+                return Response({"Messege": "Last question "}, status=status.HTTP_204_NO_CONTENT)
 
-            if seni:
-                if seniorlist:
-                    qid = random.choice(seniorlist)
-                    seniorlist.remove(qid)
-                else:
-                    qid=-1
-            else:
-                if juniorlist:
-                    qid = random.choice(juniorlist)
-                    juniorlist.remove(qid)
-                else:
-                    qid = -1
 
-            if qid == -1:
-                return Response({"Messege": "Reached End of questions"}, status=status.HTTP_204_NO_CONTENT)
+            qid = random.choice(questions_list)
+            questions_list.remove(qid)
+            strs = ",".join(map(str, questions_list))
+            user.Questions_to_list = strs
+            user.save()
             mcq = Mcq.objects.get(question_id=qid, senior=user.senior_team)
             ser = Mcq_Serializer(mcq)
             return Response(ser.data, status=status.HTTP_200_OK)

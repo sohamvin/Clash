@@ -3,7 +3,6 @@ from .models import Mcq, Custom_user, Submission, CustomUser
 
 
 
-
 class Mcq_Serializer(serializers.ModelSerializer):
     class Meta:
         model = Mcq
@@ -41,6 +40,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         if password is not None:
             instance.set_password(password)
+
+        if validated_data['senior_team']:
+            senior_objs = Mcq.objects.filter(senior=True)
+            seniorlist = [senior_obj.question_id for senior_obj in senior_objs]
+            strs = ",".join(map(str, seniorlist))
+            instance.Questions_to_list = strs
+        else:
+            junior_objs = Mcq.objects.filter(senior=False)
+            juniorlist = [junior_obj.question_id for junior_obj in junior_objs]
+            strs = ",".join(map(str, juniorlist))
+            instance.Questions_to_list = strs
 
         instance.save()
         return instance

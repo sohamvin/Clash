@@ -62,6 +62,8 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(email, password, **extra_fields)
 
+
+
 class CustomUser(AbstractUser):
     team_id = models.CharField(max_length=256, primary_key=True)
     email = models.EmailField(unique=True)
@@ -72,7 +74,9 @@ class CustomUser(AbstractUser):
     current_question = models.IntegerField(default=1, blank=False)
     previous_question = models.BooleanField(default=True, blank=False)
     senior_team= models.BooleanField(default=False)
+    Questions_to_list = models.TextField(default="NOTHING")
     objects = CustomUserManager()
+
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email', 'teammate_one']
