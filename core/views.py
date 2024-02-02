@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .models import Mcq, Submission, CustomUser
-from .serializers import Mcq_Serializer, Submission_Serializer, UserRegistrationSerializer, UserLoginSerializer, AllUserSerializer, AllQuestionSerializer, FinalSubmissionSerializer
+from .serializers import Mcq_Serializer, Submission_Serializer, UserRegistrationSerializer, UserLoginSerializer, AllUserSerializer, AllQuestionSerializer, FinalSubmissionSerializer, ALLSubmissionSerializer, ALLCustomUserSerializer, ALLMcqSerializer
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
@@ -136,11 +136,13 @@ class SubmitView(APIView):
         userinstance = CustomUser.objects.get(id=user.id)
         mcq = Mcq.objects.get(question_id=user.current_question)
 
-        payload_mcq = AllQuestionSerializer(mcq)
-        payload_mcq = payload_mcq.data
+        # payload_mcq = AllQuestionSerializer(mcq)
+        # payload_mcq = payload_mcq.data
+        #
+        # payload_user = AllUserSerializer(userinstance)
+        # payload_user = payload_user.data
 
-        payload_user = AllUserSerializer(userinstance)
-        payload_user = payload_user.data
+        # return Response({"User": payload_mcq, "MCQ": payload_user})
 
 
 
@@ -171,7 +173,7 @@ class SubmitView(APIView):
         }
 
 
-        ser = FinalSubmissionSerializer(data=payload_to_serializer)
+        ser = ALLSubmissionSerializer(data=payload_to_serializer)
         if ser.is_valid():
             ser.save()
             return Response({"messege": "Submitted"}, status=status.HTTP_200_OK)
@@ -179,6 +181,42 @@ class SubmitView(APIView):
             return Response({"ERROR" : "There was a problem"})
 
 
+from rest_framework import generics, status
+from rest_framework.response import Response
+
+class ABCSubmissionCreateView(generics.CreateAPIView):
+    serializer_class = ALLSubmissionSerializer
+
+    def create(self, request, *args, **kwargs):
+        user_id = request.data.get('user_id')  # Assuming you provide the user_id in the request data
+        question_id = request.data.get('question_id')  # Assuming you provide the question_id in the request data
+
+        try:
+            user = CustomUser.objects.get(id=user_id)
+            question = Mcq.objects.get(question_id=question_id)
+
+            # Validate if the user and question exist
+            if not user or not question:
+                return Response({'error': 'Invalid user or question ID'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # You can add more validation logic here if needed
+
+            # Create a Submission object
+            submission_data = {
+                'user_id': user.id,
+                'question_id': question.question_id,
+                'selected_option': request.data.get('selected_option'),  # Assuming you provide selected_option in the request data
+                'status': request.data.get('status', False),  # Assuming you provide status in the request data
+            }
+
+            serializer = ALLSubmissionSerializer(data=submission_data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except CustomUser.DoesNotExist or Mcq.DoesNotExist:
+            return Response({'error': 'User or question not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 

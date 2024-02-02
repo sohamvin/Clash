@@ -8,4 +8,5 @@ urlpatterns = [
     path('mcq/', GetMCQ.as_view()),
     path('logout/', LogoutView.as_view()),
     path('submit/', SubmitView.as_view()),
+    path('abc/', ABCSubmissionCreateView.as_view()),
 ]

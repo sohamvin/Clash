@@ -92,5 +92,22 @@ class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField()  # Add this line
 
 
+from rest_framework import serializers
+
+class ALLCustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = '__all__'
+
+class ALLMcqSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Mcq
+        fields = '__all__'
+
+class ALLSubmissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Submission
+        fields = '__all__'
+
 
 
