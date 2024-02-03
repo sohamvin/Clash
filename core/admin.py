@@ -7,7 +7,7 @@ from .models import Mcq,Submission, CustomUser
 # admin.site.register(Custom_user)
 @admin.register(Mcq)
 class ModelMcq(admin.ModelAdmin):
-    list_display = ['question_id', 'correct', 'correct_responces', 'senior', 'author']
+    list_display = ['question_id', 'correct', 'correct_responses', 'total_responses', 'senior', 'author']
 # admin.site.register(Submission)
 # admin.site.register(CustomToken)
 @admin.register(Submission)
@@ -16,5 +16,5 @@ class ModelSubmission(admin.ModelAdmin):
 
 @admin.register(CustomUser)
 class ModelCustomUser(admin.ModelAdmin):
-    list_display = ['team_id', 'email', 'username', 'teammate_one', 'team_score', 'senior_team']
+    list_display = ['team_id', 'email', 'username', 'teammate_one', 'current_question', 'team_score', 'senior_team']
 # admin.site.register(User)

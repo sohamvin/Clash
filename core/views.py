@@ -17,6 +17,7 @@ from django.utils import timezone
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import get_user_model
 import random
+from django.shortcuts import redirect, reverse
 
 User = get_user_model()
 
@@ -43,6 +44,7 @@ def endpoints(request):
 
     return JsonResponse({'available_endpoints': available_endpoints})
 
+
 class UserRegistrationView(APIView):
     def post(self, request):
         ser = UserRegistrationSerializer(data=request.data)
@@ -52,7 +54,6 @@ class UserRegistrationView(APIView):
 
             return Response({"messge": "Success"}, status=status.HTTP_201_CREATED)
         return Response({"messege": ser.errors}, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 class UserLoginView(APIView):
@@ -76,9 +77,6 @@ class UserLoginView(APIView):
             return response
         else:
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
 
 
 class GetMCQ(APIView):
@@ -123,8 +121,6 @@ class LogoutView(APIView):
         return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
 
 
-
-
 class SubmitView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -150,23 +146,25 @@ class SubmitView(APIView):
             data = request.data
             selected = data.get("selected")
 
-            # this line updated
-            status_of = str(mcq.correct) == selected
+            status_of = False
 
-            if status_of:
+            if str(mcq.correct) == selected:
                 if user.previous_question:
                     user.team_score += POSTIVE_MARKS_1
                 else:
                     user.team_score += POSTIVE_MARKS_2
                 user.previous_question = True
                 status_of = True
-                mcq.correct_responces += 1
+                mcq.total_responses += 1
+                mcq.correct_responses += 1
             else:
                 if user.previous_question:
-                    user.team_score -= NEGATIVE_MARKS_1
+                    user.team_score += NEGATIVE_MARKS_1
                 else:
-                    user.team_score -=NEGATIVE_MARKS_2
+                    user.team_score += NEGATIVE_MARKS_2
                 user.previous_question = False
+                mcq.total_responses += 1
+
 
             user.save()
             mcq.save()
@@ -181,7 +179,8 @@ class SubmitView(APIView):
             ser = SubmissionSerializer(data=payload_to_serializer)
             if ser.is_valid():
                 ser.save()
-                return Response({"messege": "Submitted"}, status=status.HTTP_200_OK)
+                # ***** After clicking on submit button the submission will be saved and the get request for get new mcq will be sent *****
+                return redirect(reverse('getmcq-view')) 
             else:
                 return Response({"ERROR" : "There was a problem"})
         except Exception as e:
@@ -222,6 +221,4 @@ class SubmitView(APIView):
 
 #         except CustomUser.DoesNotExist or Mcq.DoesNotExist:
 #             return Response({'error': 'User or question not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
 

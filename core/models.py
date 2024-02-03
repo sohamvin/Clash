@@ -21,13 +21,11 @@ class Mcq(models.Model):
     author = models.CharField(max_length=255, blank=False)
     authors_note = models.CharField(max_length=255, blank=True)
     senior = models.BooleanField(default=False)
-    correct_responces = models.IntegerField(default=0)
+    correct_responses = models.IntegerField(default=0)
+    total_responses = models.IntegerField(default=0)
 
     def __str__(self):
         return str(self.question_id)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
 
 
 class CustomUserManager(BaseUserManager):
