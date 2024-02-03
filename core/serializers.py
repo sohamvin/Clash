@@ -3,7 +3,7 @@ from .models import Mcq, Submission, CustomUser
 
 
 
-class Mcq_Serializer(serializers.ModelSerializer):
+class McqSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mcq
         fields = [ 'question_id', 'question_md', 'a', 'b', 'c', 'd', 'correct', 'author', 'senior']
@@ -15,10 +15,10 @@ class Mcq_Serializer(serializers.ModelSerializer):
 #         fields = ['username', 'score', 'current_question', 'previous_question']
 
 
-class Submission_Serializer(serializers.ModelSerializer):
+class SubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
-        fields = [ 'user_id', 'question_id', 'selected_option', 'status']
+        fields = '__all__'
 
 
 from rest_framework import serializers
@@ -32,7 +32,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'teammate_one', 'senior_team']
+        fields = ['team_id', 'username', 'email', 'password', 'teammate_one', 'senior_team']
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -55,59 +55,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-class AllUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = '__all__'
-
-class AllQuestionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Mcq
-        fields = '__all__'
-
-class FinalSubmissionSerializer(serializers.ModelSerializer):
-    users = AllUserSerializer()
-    questions = AllQuestionSerializer()
-
-    class Meta:
-        model = Submission
-        fields = '__all__'
-
-    def create(self, validated_data):
-        user_data = validated_data.pop('user_id')  # assuming 'user' corresponds to CustomUser
-        mcq_data = validated_data.pop('question_id')    # assuming 'mcq' corresponds to Mcq
-
-        user_instance, _ = CustomUser.objects.get_or_create(**user_data)
-        mcq_instance, _ = Mcq.objects.get_or_create(**mcq_data)
-
-        submission_instance = Submission.objects.create(user_id=user_instance, question_id=mcq_instance, **validated_data)
-        return submission_instance
-
-
-
-
 
 class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     username = serializers.CharField()  # Add this line
-
-
-from rest_framework import serializers
-
-class ALLCustomUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CustomUser
-        fields = '__all__'
-
-class ALLMcqSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Mcq
-        fields = '__all__'
-
-class ALLSubmissionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Submission
-        fields = '__all__'
-
 
 
