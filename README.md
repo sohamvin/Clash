@@ -16,6 +16,6 @@
 
 [Read Source Code Here](https://github.com/encode/django-rest-framework/tree/3.14.0/rest_framework)
 
-## DB SCHEMA (This is incorrect, but you can refer this as a beginner)
-![Schema](https://res.cloudinary.com/dzhpx2alw/image/upload/v1704877063/WhatsApp_Image_2024-01-07_at_20.12.38_0064bae4_mr98fv.jpg)
+## DB SCHEMA
+![Schema](https://github.com/sohamvin/Clash/blob/Dev_sujal/erd.png)
 
