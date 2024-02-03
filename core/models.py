@@ -26,9 +26,6 @@ class Mcq(models.Model):
     def __str__(self):
         return str(self.question_id)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):

@@ -150,10 +150,18 @@ class SubmitView(APIView):
             data = request.data
             selected = data.get("selected")
 
-            # this line updated
-            status_of = str(mcq.correct) == selected
 
-            if status_of:
+
+            # POSTIVE_MARKS_1 = 4
+            # POSTIVE_MARKS_2 = 2
+
+            # NEGATIVE_MARKS_1 = -2
+            # NEGATIVE_MARKS_2 = -1
+
+
+            status_of = False
+
+            if str(mcq.correct) == selected:
                 if user.previous_question:
                     user.team_score += POSTIVE_MARKS_1
                 else:
@@ -163,9 +171,9 @@ class SubmitView(APIView):
                 mcq.correct_responces += 1
             else:
                 if user.previous_question:
-                    user.team_score -= NEGATIVE_MARKS_1
+                    user.team_score += NEGATIVE_MARKS_1
                 else:
-                    user.team_score -=NEGATIVE_MARKS_2
+                    user.team_score += NEGATIVE_MARKS_2
                 user.previous_question = False
 
             user.save()

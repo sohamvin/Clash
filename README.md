@@ -5,8 +5,8 @@
 ## Todo List
 
 - [ ] Create Views for 
-  - [ ] Evaluate Mcq + update score 📊
-  - [ ] Update submission 🔄
+  - [x] Evaluate Mcq + update score 📊
+  - [x] Update submission 🔄
   - [ ] Fetch leaderboard 🏆
 - [ ] Create URLs / API EndPoints 🔗
 
