@@ -56,6 +56,8 @@ class CustomUser(AbstractUser):
     previous_question = models.BooleanField(default=False, blank=False)
     senior_team= models.BooleanField(default=False)
     Questions_to_list = models.TextField(default="NOTHING")
+    total_questions = models.IntegerField(default=0, blank=False)
+    correct_questions = models.IntegerField(default=0, blank=False)
     objects = CustomUserManager()
 
 

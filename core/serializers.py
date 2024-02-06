@@ -9,10 +9,10 @@ class McqSerializer(serializers.ModelSerializer):
         fields = [ 'question_id', 'question_md', 'a', 'b', 'c', 'd', 'correct', 'author', 'senior']
 
 
-# class Custom_user_Serializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Custom_user
-#         fields = ['username', 'score', 'current_question', 'previous_question']
+class ResultPageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['username', 'teammate_one', 'team_score', 'total_questions', 'correct_questions']
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
@@ -23,6 +23,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+import random
 
 User = get_user_model()
 
@@ -44,11 +45,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if validated_data['senior_team']:
             senior_objs = Mcq.objects.filter(senior=True)
             seniorlist = [senior_obj.question_id for senior_obj in senior_objs]
+            random_question_id = random.choice(seniorlist)
+            seniorlist.remove(random_question_id)
+            instance.current_question = random_question_id
             strs = ",".join(map(str, seniorlist))
             instance.Questions_to_list = strs
         else:
             junior_objs = Mcq.objects.filter(senior=False)
             juniorlist = [junior_obj.question_id for junior_obj in junior_objs]
+            random_question_id = random.choice(juniorlist)
+            juniorlist.remove(random_question_id)
+            instance.current_question = random_question_id
             strs = ",".join(map(str, juniorlist))
             instance.Questions_to_list = strs
 
