@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .models import Mcq, Submission, CustomUser
-from .serializers import McqSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, ResultPageSerializer
+from .serializers import McqSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
@@ -313,14 +313,18 @@ class ResultPageView(APIView):
 class leaderboardView(APIView):
     def get(self, request):
         try:
-            junior_list = CustomUser.objects.filter(senior_team=False).order_by('team_score', reverse=True) # Descending order
-            senior_list = CustomUser.objects.filter(senior_team=True).order_by('team_score', reverse=True) # Descending order
+            junior_list = CustomUser.objects.filter(senior_team=False).order_by('-team_score') # Descending order
+            senior_list = CustomUser.objects.filter(senior_team=True).order_by('-team_score') # Descending order
+
+            junior_list_serialized = LeaderboardSerializer(junior_list, many=True).data
+            senior_list_serialized = LeaderboardSerializer(senior_list, many=True).data
+
 
             payload = {
-                'junior_list': junior_list,
-                'senior_list': senior_list,
+                'junior_list': junior_list_serialized,
+                'senior_list': senior_list_serialized,
             }
-
+            
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

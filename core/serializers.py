@@ -12,10 +12,10 @@ class McqSerializer(serializers.ModelSerializer):
 
 
 
-class ResultPageSerializer(serializers.ModelSerializer):
+class LeaderboardSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['username', 'teammate_one', 'team_score', 'total_questions', 'correct_questions']
+        fields = ['username', 'team_score', 'total_questions', 'correct_questions']
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
