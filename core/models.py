@@ -6,7 +6,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager, Group, Per
 from django.utils import timezone
 import uuid
 from rest_framework.authtoken.models import Token
-import datetime
+from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 
@@ -78,8 +78,9 @@ class Submission(models.Model):
     user_id = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     question_id = models.ForeignKey(Mcq, on_delete=models.CASCADE)
     selected_option = models.CharField(max_length=1, choices=(("a", "A"), ("b", "B"), ("c", "C"), ("d", "D")))
-    status = models.BooleanField(default=False)
-    submitted_at = models.DateTimeField(auto_now_add=True)
+    status = models.BooleanField(default=False)    
+    submitted_at = models.DateTimeField(default = timezone.now)
+    current_grading = models.IntegerField(default=0)
 
     def __str__(self):
         return str(self.user_id) + " Question_no 👉 " + str(self.question_id) + " Selected_Option 👉 " + str(

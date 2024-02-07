@@ -10,13 +10,14 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
-from datetime import timedelta
-from django.utils import timezone
+from datetime import timedelta, datetime
+from pytz import timezone, utc
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import get_user_model
 import random
 from django.contrib.sessions.models import Session
 from math import ceil
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -71,7 +72,6 @@ class UserLoginView(APIView):
                 user.current_question = random_question_id
                 strs = ",".join(map(str, seniorlist))
                 user.Questions_to_list = strs
-                print(user.Questions_to_list)
             else:
                 junior_objs = Mcq.objects.filter(senior=False)
                 juniorlist = [junior_obj.question_id for junior_obj in junior_objs]
@@ -83,7 +83,7 @@ class UserLoginView(APIView):
 
             user.save()
             
-            expiration_time = timezone.now() + timedelta(seconds=20)
+            expiration_time = datetime.now() + timedelta(seconds=20)
 
             token_obj, _ = Token.objects.get_or_create(user=user)
             token_obj.expires_at = expiration_time
@@ -134,27 +134,36 @@ class GetCurrentQuestion(APIView):
     def get(self, request):
         user = request.user
         try:
-            first_visit_flag = request.session.get('first_visit_get_current_question', True)
-            if first_visit_flag:
+            # Use Django's built-in flag for one-time checks
+            if not request.user.end_time:
+                # Set end_time for the first visit only
                 user.end_time = timezone.now() + timedelta(minutes=30)
-                request.session['first_visit_get_current_question'] = True
-            
+                user.save()  # Persist the saved end_time
+
+            # Access and update end_time from the persisted user object
+            print(f"User end_time (from model): {user.end_time}")
 
             current_question_id = user.current_question
+
             if current_question_id:
                 try:
                     mcq = Mcq.objects.get(question_id=current_question_id, senior=user.senior_team)
                     ser = McqSerializer(mcq)
-                    remaining_time = user.end_time - timezone.now()
-                    request.session['first_visit_get_current_question'] = True
-                    return Response({"Question_data": ser.data, "Remaining_time": remaining_time}, status=status.HTTP_200_OK)
+                    print(datetime.now())
+                    print(timezone.now())
+                    remaining_time = user.end_time - timezone.now()  # Calculate remaining time (using end_time from user object)
+                    print(type(remaining_time))
+                    return Response({
+                        "Question_data": ser.data,
+                        "Remaining_time": int(remaining_time.total_seconds())  # Convert to seconds if necessary
+                    }, status=status.HTTP_200_OK)
                 except Mcq.DoesNotExist:
-                    return Response(ser.errors, status=status.HTTP_404_NOT_FOUND)
+                    return Response({"Message": "Question not found"}, status=status.HTTP_404_NOT_FOUND)
             else:
                 return Response({"Message": "No current question set"}, status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        
 
 class LogoutView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -189,19 +198,20 @@ class SubmitView(APIView):
 
             # return Response({"User": payload_mcq, "MCQ": payload_user})
 
-
-
             # in request will be only one feild for the current question: { "selected" : "a or b or c"} whatever the option the user selected
             data = request.data
             selected = data.get("selected")
 
             status_of = False
+            current_score = 0
 
             if str(mcq.correct) == selected:
                 if user.previous_question:
                     user.team_score += POSTIVE_MARKS_1
+                    current_score += POSTIVE_MARKS_1
                 else:
                     user.team_score += POSTIVE_MARKS_2
+                    current_score += POSTIVE_MARKS_2
                 user.previous_question = True
                 user.total_questions += 1
                 user.correct_questions += 1
@@ -211,8 +221,10 @@ class SubmitView(APIView):
             else:
                 if user.previous_question:
                     user.team_score += NEGATIVE_MARKS_1
+                    current_score += NEGATIVE_MARKS_1
                 else:
                     user.team_score += NEGATIVE_MARKS_2
+                    current_score += NEGATIVE_MARKS_2
                 user.previous_question = False
                 user.total_questions += 1
                 mcq.total_responses += 1
@@ -225,7 +237,8 @@ class SubmitView(APIView):
                 "user_id": user.team_id,
                 "question_id":mcq.question_id,
                 "selected_option":str(selected),
-                "status": status_of
+                "status": status_of,
+                "current_grading": current_score
             }
 
             ser = SubmissionSerializer(data=payload_to_serializer)
@@ -268,6 +281,8 @@ class SubmitView(APIView):
         except:
             return None
     
+
+
 
 class ResultPageView(APIView):
     authentication_classes = [TokenAuthentication]

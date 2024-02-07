@@ -4,9 +4,12 @@ from .models import Mcq, Submission, CustomUser
 
 
 class McqSerializer(serializers.ModelSerializer):
+    correct = serializers.CharField(write_only = True)
+
     class Meta:
         model = Mcq
         fields = [ 'question_id', 'question_md', 'a', 'b', 'c', 'd', 'correct', 'author', 'senior']
+
 
 
 class ResultPageSerializer(serializers.ModelSerializer):
