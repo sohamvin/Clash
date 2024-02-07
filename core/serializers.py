@@ -45,17 +45,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if validated_data['senior_team']:
             senior_objs = Mcq.objects.filter(senior=True)
             seniorlist = [senior_obj.question_id for senior_obj in senior_objs]
-            random_question_id = random.choice(seniorlist)
-            seniorlist.remove(random_question_id)
-            instance.current_question = random_question_id
             strs = ",".join(map(str, seniorlist))
             instance.Questions_to_list = strs
         else:
             junior_objs = Mcq.objects.filter(senior=False)
             juniorlist = [junior_obj.question_id for junior_obj in junior_objs]
-            random_question_id = random.choice(juniorlist)
-            juniorlist.remove(random_question_id)
-            instance.current_question = random_question_id
             strs = ",".join(map(str, juniorlist))
             instance.Questions_to_list = strs
 
@@ -66,5 +60,4 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     username = serializers.CharField()  # Add this line
-
 

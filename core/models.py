@@ -58,6 +58,7 @@ class CustomUser(AbstractUser):
     Questions_to_list = models.TextField(default="NOTHING")
     total_questions = models.IntegerField(default=0, blank=False)
     correct_questions = models.IntegerField(default=0, blank=False)
+    end_time = models.DateTimeField(auto_now_add=True)
     objects = CustomUserManager()
 
 
@@ -83,4 +84,3 @@ class Submission(models.Model):
     def __str__(self):
         return str(self.user_id) + " Question_no 👉 " + str(self.question_id) + " Selected_Option 👉 " + str(
             self.selected_option) + "  👉 " + str(self.status)
-

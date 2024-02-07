@@ -15,6 +15,8 @@ from django.utils import timezone
 from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import get_user_model
 import random
+from django.contrib.sessions.models import Session
+from math import ceil
 
 User = get_user_model()
 
@@ -61,6 +63,26 @@ class UserLoginView(APIView):
             password = ser.validated_data['password']
             user = authenticate(username=username, password=password, request=request)
 
+            if user.senior_team:
+                senior_objs = Mcq.objects.filter(senior=True)
+                seniorlist = [senior_obj.question_id for senior_obj in senior_objs]
+                random_question_id = random.choice(seniorlist)
+                seniorlist.remove(random_question_id)
+                user.current_question = random_question_id
+                strs = ",".join(map(str, seniorlist))
+                user.Questions_to_list = strs
+                print(user.Questions_to_list)
+            else:
+                junior_objs = Mcq.objects.filter(senior=False)
+                juniorlist = [junior_obj.question_id for junior_obj in junior_objs]
+                random_question_id = random.choice(juniorlist)
+                juniorlist.remove(random_question_id)
+                user.current_question = random_question_id
+                strs = ",".join(map(str, juniorlist))
+                user.Questions_to_list = strs
+
+            user.save()
+            
             expiration_time = timezone.now() + timedelta(seconds=20)
 
             token_obj, _ = Token.objects.get_or_create(user=user)
@@ -77,32 +99,32 @@ class UserLoginView(APIView):
 
 # Will be called only one time, at the start of the contest (to set the first question as random)
 # After submission, the get_new_question_data will be called from within the SubmitView, no need to redirect to this view
-class GetMCQ(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+# class GetMCQ(APIView):
+#     authentication_classes = [TokenAuthentication]
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        token = request.auth
-        user = request.user
+#     def get(self, request):
+#         token = request.auth
+#         user = request.user
 
-        questions_list_str = user.Questions_to_list
+#         questions_list_str = user.Questions_to_list
 
-        questions_list = questions_list_str.split(',')
-        try:
-            if not questions_list:
-                return Response({"Message": "Last question"}, status=status.HTTP_204_NO_CONTENT)
+#         questions_list = questions_list_str.split(',')
+#         try:
+#             if not questions_list:
+#                 return Response({"Message": "Last question"}, status=status.HTTP_204_NO_CONTENT)
 
-            qid = random.choice(questions_list)
-            questions_list.remove(qid)
-            strs = ",".join(map(str, questions_list))
-            user.Questions_to_list = strs
-            user.current_question = qid
-            user.save()
-            mcq = Mcq.objects.get(question_id=qid, senior=user.senior_team)
-            ser = McqSerializer(mcq)
-            return Response(ser.data, status=status.HTTP_200_OK)
-        except:
-            return Response({"Error": "Ran out of questions"}, status=status.HTTP_400_BAD_REQUEST)
+#             qid = random.choice(questions_list)
+#             questions_list.remove(qid)
+#             strs = ",".join(map(str, questions_list))
+#             user.Questions_to_list = strs
+#             user.current_question = qid
+#             user.save()
+#             mcq = Mcq.objects.get(question_id=qid, senior=user.senior_team)
+#             ser = McqSerializer(mcq)
+#             return Response(ser.data, status=status.HTTP_200_OK)
+#         except:
+#             return Response({"Error": "Ran out of questions"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GetCurrentQuestion(APIView):
@@ -112,19 +134,26 @@ class GetCurrentQuestion(APIView):
     def get(self, request):
         user = request.user
         try:
-            current_question_id = user.current_question
+            first_visit_flag = request.session.get('first_visit_get_current_question', True)
+            if first_visit_flag:
+                user.end_time = timezone.now() + timedelta(minutes=30)
+                request.session['first_visit_get_current_question'] = True
+            
 
+            current_question_id = user.current_question
             if current_question_id:
                 try:
                     mcq = Mcq.objects.get(question_id=current_question_id, senior=user.senior_team)
                     ser = McqSerializer(mcq)
-                    return Response(ser.data, status=status.HTTP_200_OK)
+                    remaining_time = user.end_time - timezone.now()
+                    request.session['first_visit_get_current_question'] = True
+                    return Response({"Question_data": ser.data, "Remaining_time": remaining_time}, status=status.HTTP_200_OK)
                 except Mcq.DoesNotExist:
-                    return Response({"error": "Current question not found"}, status=status.HTTP_404_NOT_FOUND)
+                    return Response(ser.errors, status=status.HTTP_404_NOT_FOUND)
             else:
-                return Response({"message": "No current question set"}, status=status.HTTP_204_NO_CONTENT)
-        except:
-            return Response({"Error": "Ran out of questions"})
+                return Response({"Message": "No current question set"}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class LogoutView(APIView):
@@ -264,3 +293,19 @@ class ResultPageView(APIView):
             return Response(result_page_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class leaderboardView(APIView):
+    def get(self, request):
+        try:
+            junior_list = CustomUser.objects.filter(senior_team=False).order_by('team_score', reverse=True) # Descending order
+            senior_list = CustomUser.objects.filter(senior_team=True).order_by('team_score', reverse=True) # Descending order
+
+            payload = {
+                'junior_list': junior_list,
+                'senior_list': senior_list,
+            }
+
+            return Response(payload, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
