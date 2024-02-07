@@ -12,7 +12,7 @@ class ModelMcq(admin.ModelAdmin):
 # admin.site.register(CustomToken)
 @admin.register(Submission)
 class ModelSubmission(admin.ModelAdmin):
-    list_display = ['submission_id', 'user_id', 'selected_option', 'question_id', 'submitted_at']
+    list_display = ['submission_id', 'user_id', 'selected_option', 'question_id', 'current_grading','submitted_at']
 
 @admin.register(CustomUser)
 class ModelCustomUser(admin.ModelAdmin):

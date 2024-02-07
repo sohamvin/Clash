@@ -160,19 +160,20 @@ class SubmitView(APIView):
 
             # return Response({"User": payload_mcq, "MCQ": payload_user})
 
-
-
             # in request will be only one feild for the current question: { "selected" : "a or b or c"} whatever the option the user selected
             data = request.data
             selected = data.get("selected")
 
             status_of = False
+            current_score = 0
 
             if str(mcq.correct) == selected:
                 if user.previous_question:
                     user.team_score += POSTIVE_MARKS_1
+                    current_score += POSTIVE_MARKS_1
                 else:
                     user.team_score += POSTIVE_MARKS_2
+                    current_score += POSTIVE_MARKS_2
                 user.previous_question = True
                 user.total_questions += 1
                 user.correct_questions += 1
@@ -182,8 +183,10 @@ class SubmitView(APIView):
             else:
                 if user.previous_question:
                     user.team_score += NEGATIVE_MARKS_1
+                    current_score += NEGATIVE_MARKS_1
                 else:
                     user.team_score += NEGATIVE_MARKS_2
+                    current_score += NEGATIVE_MARKS_2
                 user.previous_question = False
                 user.total_questions += 1
                 mcq.total_responses += 1
@@ -196,7 +199,8 @@ class SubmitView(APIView):
                 "user_id": user.team_id,
                 "question_id":mcq.question_id,
                 "selected_option":str(selected),
-                "status": status_of
+                "status": status_of,
+                "current_grading": current_score
             }
 
             ser = SubmissionSerializer(data=payload_to_serializer)
@@ -239,6 +243,8 @@ class SubmitView(APIView):
         except:
             return None
     
+
+
 
 class ResultPageView(APIView):
     authentication_classes = [TokenAuthentication]
