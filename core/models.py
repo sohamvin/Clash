@@ -4,14 +4,11 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Abstra
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager, Group, Permission
 from django.utils import timezone
-# import uuid
+import uuid
 from rest_framework.authtoken.models import Token
-import datetime
+from datetime import datetime, timedelta
 
-# class CustomToken(Token):
-#     expires_at = models.DateTimeField(null=True, blank=True)
-
-
+from django.contrib.auth import get_user_model
 
 class Mcq(models.Model):
     question_id = models.IntegerField(primary_key = True)
@@ -24,11 +21,11 @@ class Mcq(models.Model):
     author = models.CharField(max_length=255, blank=False)
     authors_note = models.CharField(max_length=255, blank=True)
     senior = models.BooleanField(default=False)
-    correct_responces = models.IntegerField(default=0)
+    correct_responses = models.IntegerField(default=0)
+    total_responses = models.IntegerField(default=0)
 
     def __str__(self):
         return str(self.question_id)
-
 
 
 class CustomUserManager(BaseUserManager):
@@ -48,28 +45,32 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-
 class CustomUser(AbstractUser):
+    team_id = models.CharField(max_length=256, primary_key=True)
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=256, unique=True) # overrided , but must be team name , not username of user
     teammate_one = models.CharField(max_length=300)
     teammate_two = models.CharField(max_length=300, blank=True)
     team_score = models.IntegerField(default=0)
     current_question = models.IntegerField(default=1, blank=False)
-    previous_question = models.BooleanField(default=True, blank=False)
+    previous_question = models.BooleanField(default=False, blank=False)
     senior_team= models.BooleanField(default=False)
     Questions_to_list = models.TextField(default="NOTHING")
+    total_questions = models.IntegerField(default=0, blank=False)
+    correct_questions = models.IntegerField(default=0, blank=False)
+    end_time = models.DateTimeField(auto_now_add=True)
     objects = CustomUserManager()
 
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email', 'teammate_one']
 
-    groups = models.ManyToManyField(Group, related_name='custom_user_groups')
-    user_permissions = models.ManyToManyField(Permission, related_name='custom_user_permissions')
-
-
-
+    def save(self, *args, **kwargs):
+        if not self.team_id:
+            self.team_id = str(uuid.uuid4())
+        super().save(*args, **kwargs)
+    # groups = models.ManyToManyField(Group, related_name='custom_user_groups')
+    # user_permissions = models.ManyToManyField(Permission, related_name='custom_user_permissions')
 
 
 class Submission(models.Model):
@@ -77,9 +78,10 @@ class Submission(models.Model):
     user_id = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     question_id = models.ForeignKey(Mcq, on_delete=models.CASCADE)
     selected_option = models.CharField(max_length=1, choices=(("a", "A"), ("b", "B"), ("c", "C"), ("d", "D")))
-    status = models.BooleanField( default=False)
-    submitted_at = models.DateTimeField(auto_now_add=True)
-    #
+    status = models.BooleanField(default=False)    
+    submitted_at = models.DateTimeField(default = timezone.now)
+    current_grading = models.IntegerField(default=0)
+
     def __str__(self):
         return str(self.user_id) + " Question_no 👉 " + str(self.question_id) + " Selected_Option 👉 " + str(
             self.selected_option) + "  👉 " + str(self.status)

@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'core',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_extensions'
 ]
 
 AUTH_USER_MODEL = 'core.CustomUser'
@@ -119,3 +120,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+GRAPH_MODELS ={
+'all_applications': True,
+'graph_models': True,
+}
