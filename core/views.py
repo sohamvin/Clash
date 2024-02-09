@@ -171,7 +171,7 @@ class SubmitView(APIView):
             "selected_option":str(selected),
             "status": status_of
         }
-
+        user.save()
 
         ser = ALLSubmissionSerializer(data=payload_to_serializer)
         if ser.is_valid():
