@@ -1,10 +1,10 @@
 from django.contrib import admin
-from .models import Mcq,Submission, CustomUser
+from .models import Mcq,Submission, CustomUser, StreakLifeline
 
 # LATEST COMMIT ON Dev_sujal
 
 # Register your models here.
-# admin.site.register(Custom_user)
+admin.site.register(StreakLifeline)
 @admin.register(Mcq)
 class ModelMcq(admin.ModelAdmin):
     list_display = ['question_id', 'correct', 'correct_responses', 'total_responses', 'senior', 'author']

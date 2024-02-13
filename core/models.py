@@ -7,6 +7,7 @@ from django.utils import timezone
 import uuid
 from rest_framework.authtoken.models import Token
 from datetime import datetime, timedelta
+import random
 
 from django.contrib.auth import get_user_model
 
@@ -54,6 +55,7 @@ class CustomUser(AbstractUser):
     team_score = models.IntegerField(default=0)
     current_question = models.IntegerField(default=1, blank=False)
     previous_question = models.BooleanField(default=False, blank=False)
+    question_streak = models.IntegerField(default=0)
     senior_team= models.BooleanField(default=False)
     Questions_to_list = models.TextField(default="NOTHING")
     total_questions = models.IntegerField(default=0, blank=False)
@@ -86,3 +88,9 @@ class Submission(models.Model):
     def __str__(self):
         return str(self.user_id) + " Question_no 👉 " + str(self.question_id) + " Selected_Option 👉 " + str(
             self.selected_option) + "  👉 " + str(self.status)
+
+
+class StreakLifeline(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    questions = models.TextField(default="")
+    is_on = models.BooleanField(default=False)

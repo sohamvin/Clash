@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Mcq, Submission, CustomUser
-from .serializers import McqSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer
+from .models import Mcq, Submission, CustomUser, StreakLifeline
+from .serializers import McqSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer, StreakLifelineSerializer, SpecialMcqSerializer
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
@@ -18,6 +18,7 @@ import random
 from django.contrib.sessions.models import Session
 from math import ceil
 from django.utils import timezone
+from .Streak import function
 
 User = get_user_model()
 
@@ -26,6 +27,7 @@ POSTIVE_MARKS_2 = 2
 
 NEGATIVE_MARKS_1 = -2
 NEGATIVE_MARKS_2 = -1
+
 
 # TODO @permission_classes([IsAuthenticated])
 
@@ -82,7 +84,7 @@ class UserLoginView(APIView):
                 user.Questions_to_list = strs
 
             user.save()
-            
+
             expiration_time = datetime.now() + timedelta(seconds=20)
 
             token_obj, _ = Token.objects.get_or_create(user=user)
@@ -159,7 +161,7 @@ class GetCurrentQuestion(APIView):
                 return Response({"Message": "No current question set"}, status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
 
 class LogoutView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -183,18 +185,7 @@ class SubmitView(APIView):
         try:
             token = request.auth
             user = request.user
-            # userinstance = CustomUser.objects.get(id=user.id)
             mcq = Mcq.objects.get(question_id=user.current_question)
-                                  
-            # payload_mcq = AllQuestionSerializer(mcq)
-            # payload_mcq = payload_mcq.data
-
-            # payload_user = AllUserSerializer(userinstance)
-            # payload_user = payload_user.data
-
-            # return Response({"User": payload_mcq, "MCQ": payload_user})
-
-            # in request will be only one feild for the current question: { "selected" : "a or b or c"} whatever the option the user selected
             data = request.data
             selected = data.get("selected")
 
@@ -203,6 +194,7 @@ class SubmitView(APIView):
 
             if str(mcq.correct) == selected:
                 if user.previous_question:
+                    user.question_streak +=1
                     user.team_score += POSTIVE_MARKS_1
                     current_score += POSTIVE_MARKS_1
                 else:
@@ -214,6 +206,8 @@ class SubmitView(APIView):
                 status_of = True
                 mcq.total_responses += 1
                 mcq.correct_responses += 1
+                user.question_streak += 1
+
             else:
                 if user.previous_question:
                     user.team_score += NEGATIVE_MARKS_1
@@ -224,15 +218,15 @@ class SubmitView(APIView):
                 user.previous_question = False
                 user.total_questions += 1
                 mcq.total_responses += 1
-
+                user.question_streak = 0
 
             user.save()
             mcq.save()
 
             payload_to_serializer = {
                 "user_id": user.team_id,
-                "question_id":mcq.question_id,
-                "selected_option":str(selected),
+                "question_id": mcq.question_id,
+                "selected_option": str(selected),
                 "status": status_of,
                 "current_grading": current_score
             }
@@ -247,34 +241,60 @@ class SubmitView(APIView):
                 else:
                     return Response({"message": "Ran out of questions"}, status=status.HTTP_400_BAD_REQUEST)
             else:
-                return Response({"ERROR" : "There was a problem, the serializer is not valid."})
+                return Response({"ERROR": "There was a problem, the serializer is not valid."})
         except Exception as e:
             print(f"Error during submission: {str(e)}")
             return Response({"ERROR": "There was a problem."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
 
     def get_new_question_data(self, user):
-        # Your logic to get the new question data
         try:
-            questions_list_str = user.Questions_to_list
-            questions_list = questions_list_str.split(',')
-            # Check if there are more questions available
-            if not questions_list:
-                return None  # No more questions available
+            # Attempt to get the streak lifeline for the user
+            try:
+                streak_lifeline = StreakLifeline.objects.get(user=user)
+            except StreakLifeline.DoesNotExist:
+                streak_lifeline = None
 
-            # Get a random question from the remaining list
-            qid = random.choice(questions_list)
-            questions_list.remove(qid)
-            strs = ",".join(map(str, questions_list))
-            user.Questions_to_list = strs
-            user.current_question = qid
-            user.save()
+            if streak_lifeline is None:
+                questions_list_str = user.Questions_to_list
+                questions_list = questions_list_str.split(',')
+
+                if not questions_list:
+                    return None  # No more questions available
+
+                qid = random.choice(questions_list)
+                questions_list.remove(qid)
+                strs = ",".join(map(str, questions_list))
+                user.Questions_to_list = strs
+                user.current_question = qid
+                user.save()
+
+            else:
+                questions_list_str = streak_lifeline.questions
+                questions_list = questions_list_str.split(',')
+
+                if not questions_list:
+                    streak_lifeline.delete()
+                    return None  # No more questions available
+
+                qid = random.choice(questions_list)
+                questions_list.remove(qid)
+                strs = ",".join(map(str, questions_list))
+                streak_lifeline.questions = strs
+                streak_lifeline.save()
+                user.current_question = qid
+                user.save()
 
             # Retrieve and serialize the new question
             mcq = Mcq.objects.get(question_id=qid, senior=user.senior_team)
             ser = McqSerializer(mcq)
             return ser.data
-        except:
+
+        except Mcq.DoesNotExist:
+            return None  # Handle case where the retrieved MCQ does not exist
+
+        except Exception as e:
+            # Handle any other unexpected exceptions
+            # Log the error or return a structured error response
             return None
 
 
@@ -287,7 +307,7 @@ class ResultPageView(APIView):
             user = request.user
 
             if user.total_questions != 0:
-                accuracy = (user.correct_questions/user.total_questions) * 100
+                accuracy = (user.correct_questions / user.total_questions) * 100
             else:
                 accuracy = 0
             result_page_data = {
@@ -307,12 +327,11 @@ class ResultPageView(APIView):
 class leaderboardView(APIView):
     def get(self, request):
         try:
-            junior_list = CustomUser.objects.filter(senior_team=False).order_by('-team_score') # Descending order
-            senior_list = CustomUser.objects.filter(senior_team=True).order_by('-team_score') # Descending order
+            junior_list = CustomUser.objects.filter(senior_team=False, is_superuser=False).order_by('-team_score')  # Descending order
+            senior_list = CustomUser.objects.filter(senior_team=True, is_superuser=False).order_by('-team_score')  # Descending order
 
             junior_list_serialized = LeaderboardSerializer(junior_list, many=True).data
             senior_list_serialized = LeaderboardSerializer(senior_list, many=True).data
-
 
             payload = {
                 'junior_list': junior_list_serialized,
@@ -322,3 +341,42 @@ class leaderboardView(APIView):
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SendOnlyTheNextN(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            token = request.auth
+            user = request.user
+            if user.question_streak != 1:
+                return Response({"messege": "Not on the streak"})
+
+
+            payload = {
+                "user": user.team_id
+            }
+
+
+            ser = StreakLifelineSerializer(data=payload)
+            if ser.is_valid():
+                instance = ser.save()
+
+                listt = instance.questions.split(',')
+                objs = []
+                for l in listt:
+                    objs.append(SpecialMcqSerializer(Mcq.objects.get(question_id=int(l))))
+
+                datatosend = function(objs)
+
+                return Response({"encoded": str(datatosend)}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "Validation error", "errors": ser.errors}, status=400)
+
+        except Exception as e:
+            return Response({"message": str(e)}, status=500)
+
+
+
