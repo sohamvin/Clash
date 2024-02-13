@@ -58,6 +58,7 @@ class CustomUser(AbstractUser):
     Questions_to_list = models.TextField(default="NOTHING")
     total_questions = models.IntegerField(default=0, blank=False)
     correct_questions = models.IntegerField(default=0, blank=False)
+    # question_streak = models.IntegerField(default=0, blank=False)
     end_time = models.DateTimeField(auto_now_add=True)
     objects = CustomUserManager()
 

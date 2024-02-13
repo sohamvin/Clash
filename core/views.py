@@ -97,6 +97,7 @@ class UserLoginView(APIView):
         else:
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 # Will be called only one time, at the start of the contest (to set the first question as random)
 # After submission, the get_new_question_data will be called from within the SubmitView, no need to redirect to this view
 # class GetMCQ(APIView):
@@ -140,17 +141,12 @@ class GetCurrentQuestion(APIView):
                 user.end_time = timezone.now() + timedelta(minutes=30)
                 user.save()  # Persist the saved end_time
 
-            # Access and update end_time from the persisted user object
-            print(f"User end_time (from model): {user.end_time}")
-
             current_question_id = user.current_question
 
             if current_question_id:
                 try:
                     mcq = Mcq.objects.get(question_id=current_question_id, senior=user.senior_team)
                     ser = McqSerializer(mcq)
-                    print(datetime.now())
-                    print(timezone.now())
                     remaining_time = user.end_time - timezone.now()  # Calculate remaining time (using end_time from user object)
                     print(type(remaining_time))
                     return Response({
@@ -280,8 +276,6 @@ class SubmitView(APIView):
             return ser.data
         except:
             return None
-    
-
 
 
 class ResultPageView(APIView):
@@ -324,7 +318,7 @@ class leaderboardView(APIView):
                 'junior_list': junior_list_serialized,
                 'senior_list': senior_list_serialized,
             }
-            
+
             return Response(payload, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
