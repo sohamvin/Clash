@@ -16,5 +16,5 @@ class ModelSubmission(admin.ModelAdmin):
 
 @admin.register(CustomUser)
 class ModelCustomUser(admin.ModelAdmin):
-    list_display = ['team_id', 'email', 'username', 'teammate_one', 'current_question', 'team_score', 'senior_team', 'end_time']
+    list_display = ['team_id', 'email', 'username', 'teammate_one', 'current_question', 'question_streak', 'team_score', 'senior_team', 'end_time']
 # admin.site.register(User)
