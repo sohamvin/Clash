@@ -56,12 +56,13 @@ class CustomUser(AbstractUser):
     current_question = models.IntegerField(default=1, blank=False)
     previous_question = models.BooleanField(default=False, blank=False)
     question_streak = models.IntegerField(default=0)
-    senior_team= models.BooleanField(default=False)
+    senior_team = models.BooleanField(default=False)
     Questions_to_list = models.TextField(default="NOTHING")
     total_questions = models.IntegerField(default=0, blank=False)
     correct_questions = models.IntegerField(default=0, blank=False)
-    # question_streak = models.IntegerField(default=0, blank=False)
-    end_time = models.DateTimeField(auto_now_add=True)
+    is_first_visit = models.BooleanField(default=True, blank=False) # to set the end_time at first visit
+    end_time = models.DateTimeField(null=True, blank=True, default=timezone.now)
+    is_skip_question = models.BooleanField(default=True, blank=False)
     objects = CustomUserManager()
 
 
@@ -92,5 +93,4 @@ class Submission(models.Model):
 
 class StreakLifeline(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    questions = models.TextField(default="")
-    is_on = models.BooleanField(default=False)
+    is_used = models.BooleanField(default=True)
