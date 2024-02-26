@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Mcq,Submission, CustomUser, StreakLifeline
+from .models import Mcq,Submission, CustomUser, StreakLifeline, SkipQuestionLifeline
 
 # LATEST COMMIT ON Dev_sujal
 
@@ -18,3 +18,6 @@ class ModelSubmission(admin.ModelAdmin):
 class ModelCustomUser(admin.ModelAdmin):
     list_display = ['team_id', 'email', 'username', 'teammate_one', 'current_question', 'question_streak', 'team_score', 'senior_team', 'end_time']
 # admin.site.register(User)
+@admin.register(SkipQuestionLifeline)
+class ModelSkipQuestion(admin.ModelAdmin):
+    list_display = ['user']

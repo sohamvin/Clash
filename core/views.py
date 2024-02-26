@@ -3,8 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Mcq, Submission, CustomUser, StreakLifeline
-from .serializers import McqSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer
+from .models import Mcq, Submission, CustomUser, StreakLifeline, SkipQuestionLifeline
+from .serializers import McqSerializer, McqEncodedSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
@@ -16,6 +16,7 @@ from rest_framework.authentication import TokenAuthentication
 from django.contrib.auth import get_user_model
 import random
 from django.utils import timezone
+from .Streak import function
 
 User = get_user_model()
 
@@ -87,11 +88,17 @@ class SkipMcqView(APIView):
 
     def get(self, request):
         user = request.user
-        
+        try:
+            skip_object = SkipQuestionLifeline.objects.get(user=user)
+        except SkipQuestionLifeline.DoesNotExist:
+            skip_object = None
         # Check if the lifeline is available and has not been used yet
-        if user.is_skip_question:
+        if skip_object != None:
+            return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
+        else:
             if not if_end_time_exceeded(request):
                 try:
+                    SkipQuestionLifeline.objects.create(user=user) 
                     questions_list_str = user.Questions_to_list
                     questions_list = questions_list_str.split(',')
                     
@@ -118,8 +125,6 @@ class SkipMcqView(APIView):
                     return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
                 return redirect('result-view')
-        else:
-            return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
 
 
 class GetCurrentQuestion(APIView):
@@ -133,7 +138,7 @@ class GetCurrentQuestion(APIView):
                 if request.user.is_first_visit:
                     user.is_first_visit = False
                     # Set end_time for the first visit only
-                    user.end_time = timezone.now() + timedelta(minutes=1)
+                    user.end_time = timezone.now() + timedelta(minutes=5)
                     user.save()
 
                 # print(user.end_time)
@@ -244,42 +249,18 @@ class SubmitView(APIView):
 
     def get_new_question_data(self, user):
         try:
-            # Attempt to get the streak lifeline for the user
-            try:
-                streak_lifeline = StreakLifeline.objects.get(user=user)
-            except StreakLifeline.DoesNotExist:
-                streak_lifeline = None
+            questions_list_str = user.Questions_to_list
+            questions_list = questions_list_str.split(',')
 
-            if streak_lifeline is None:
-                questions_list_str = user.Questions_to_list
-                questions_list = questions_list_str.split(',')
+            if not questions_list:
+                return None  # No more questions available
 
-                if not questions_list:
-                    return None  # No more questions available
-
-                qid = random.choice(questions_list)
-                questions_list.remove(qid)
-                strs = ",".join(map(str, questions_list))
-                user.Questions_to_list = strs
-                user.current_question = qid
-                user.save()
-
-            else:
-                questions_list_str = streak_lifeline.questions
-                questions_list = questions_list_str.split(',')
-
-                if not questions_list:
-                    streak_lifeline.delete()
-                    return None  # No more questions available
-
-                qid = random.choice(questions_list)
-                questions_list.remove(qid)
-                strs = ",".join(map(str, questions_list))
-                streak_lifeline.questions = strs
-                streak_lifeline.save()
-                user.current_question = qid
-                user.save()
-
+            qid = questions_list[0]
+            questions_list.remove(qid)
+            strs = ",".join(map(str, questions_list))
+            user.Questions_to_list = strs
+            user.current_question = qid
+            user.save()
             # Retrieve and serialize the new question
             mcq = Mcq.objects.get(question_id=qid, senior=user.senior_team)
             ser = McqSerializer(mcq)
@@ -347,37 +328,28 @@ class leaderboardView(APIView):
             return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# class SendOnlyTheNextN(APIView):
-#     authentication_classes = [TokenAuthentication]
-#     permission_classes = [IsAuthenticated]
+class EncodedDataView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
-#     def get(self, request):
-#         try:
-#             token = request.auth
-#             user = request.user
-#             if user.question_streak != 1:
-#                 return Response({"message": "Not on the streak"})
+    def get(self, request):
+        user = request.user
+        try:
+            streak = StreakLifeline.objects.get(user=user)
+        except StreakLifeline.DoesNotExist:
+            streak = None
 
+        if streak != None or user.question_streak != 1:
+            return Response({"Message": "Lifeline not available or already used"}, status=status.HTTP_200_OK)
+        if user.question_streak == 1:
+            StreakLifeline.objects.create(user=user)
+            li = []
+            li.append(user.current_question)
+            questions_list_str = user.Questions_to_list
+            questions_list = questions_list_str.split(',')
+            li.extend(questions_list[:1])
 
-#             payload = {
-#                 "user": user.team_id
-#             }
-
-#             ser = StreakLifelineSerializer(data=payload)
-#             if ser.is_valid():
-#                 instance = ser.save()
-
-#                 listt = instance.questions.split(',')
-#                 objs = []
-#                 for l in listt:
-#                     objs.append(SpecialMcqSerializer(Mcq.objects.get(question_id=int(l))))
-
-#                 datatosend = function(objs)
-
-#                 return Response({"encoded": str(datatosend)}, status=status.HTTP_200_OK)
-#             else:
-#                 return Response({"message": "Validation error", "errors": ser.errors}, status=400)
-
-#         except Exception as e:
-#             return Response({"message": str(e)}, status=500)
-
+            mcqs = Mcq.objects.filter(question_id__in=li)
+            serializer = McqEncodedSerializer(mcqs, many=True)
+            enc_data = function(serializer.data)
+            return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)

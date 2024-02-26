@@ -2,6 +2,10 @@ from rest_framework import serializers
 from .models import Mcq, Submission, CustomUser, StreakLifeline
 import random
 
+class McqEncodedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Mcq
+        fields = [ 'question_id', 'question_md', 'a', 'b', 'c', 'd', 'correct', 'author', 'senior']
 
 class McqSerializer(serializers.ModelSerializer):
     correct = serializers.CharField(write_only = True)
@@ -78,37 +82,7 @@ class UserLoginSerializer(serializers.Serializer):
     
 
 
-# class StreakLifelineSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = StreakLifeline
-#         fields = ['user']
-
-#     def create(self, validated_data):
-#         userr = validated_data.get('user')
-
-#         # Check if userr is not None and Questions_to_list is not empty
-#         if userr and userr.Questions_to_list:
-#             listt = userr.Questions_to_list.split(",")
-#             item = int(userr.current_question)
-#             listt.append(item)
-
-#             # Ensure that there are at least 5 items to select randomly
-#             #should be 5, but 2 for testing purposes
-#             if len(listt) >= 2:
-#                 random_items = random.sample(listt, 2)
-#                 my_list = [item for item in listt if item not in random_items]
-#                 strs = ",".join(map(str, my_list))
-#                 userr.Questions_to_list = strs
-
-#                 abc = ",".join(map(str, random_items))
-#                 instance = StreakLifeline.objects.create(questions=abc, user=userr, is_on=True)
-#                 userr.current_question = random_items[0]
-#                 userr.save()
-#                 return instance
-#             else:
-#                 # Handle case where Questions_to_list has fewer than 5 items
-#                 raise serializers.ValidationError("Questions_to_list should have at least 2 items.")
-#         else:
-#             # Handle case where userr is None or Questions_to_list is empty
-#             raise serializers.ValidationError("Invalid user or empty Questions_to_list.")
-
+class StreakLifelineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StreakLifeline
+        fields = '__all__'

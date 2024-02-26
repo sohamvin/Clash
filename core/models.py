@@ -93,4 +93,6 @@ class Submission(models.Model):
 
 class StreakLifeline(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    is_used = models.BooleanField(default=True)
+
+class SkipQuestionLifeline(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)

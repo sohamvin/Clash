@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 def function(ip_data_in_dicts):
     main_str = ""
-
+    
     for obj in ip_data_in_dicts:
         main_str += str(obj["question_md"]) + " "
         main_str += str(obj["correct"]) + " "
