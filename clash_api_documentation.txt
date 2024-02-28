@@ -1,0 +1,185 @@
+=======================================================
+                    API Documentation
+=======================================================
+
+1. endpoints API
+-----------------
+Method: GET
+Endpoint: /endpoints/
+Description: Returns a list of available endpoints in the backend.
+Authentication: Not required.
+
+Response:
+---------
+Success (HTTP 200 OK):
+{
+    "available_endpoints": [
+        "/endpoints/",
+        "/token/refresh/",
+        "/list-endpoints/"
+    ]
+}
+
+2. UserRegistrationView API
+----------------------------
+Method: POST
+Endpoint: /user-registration/
+Description: Allows users to register with the system.
+Authentication: Not required.
+
+Input:
+------
+- username (string)
+- email (string)
+- password (string)
+
+Response:
+---------
+Success (HTTP 201 Created):
+{
+    "message": "Registration Successful"
+}
+
+Failure (HTTP 400 Bad Request):
+{
+    "message": {
+        "<field>": ["<error message>"]
+    }
+}
+
+3. UserLoginView API
+---------------------
+Method: POST
+Endpoint: /user-login/
+Description: Allows users to login and obtain an authentication token.
+Authentication: Not required.
+
+Input:
+------
+- username (string)
+- password (string)
+
+Response:
+---------
+Success (HTTP 200 OK):
+{
+    "message": "Login successful",
+    "Authorization": "token <auth_token>"
+}
+
+Failure (HTTP 400 Bad Request):
+{
+    "field": ["<error message>"]
+}
+
+4. SkipMcqView API
+-------------------
+Method: GET
+Endpoint: /skip-mcq/
+Description: Allows users to skip a multiple-choice question.
+Authentication: Token-based authentication required.
+
+Response:
+---------
+Success (HTTP 200 OK):
+- With MCQ data
+- With time remaining
+
+Failure:
+- (HTTP 403 Forbidden) Lifeline not available or already used
+- (HTTP 204 No Content) No questions available
+
+5. GetCurrentQuestion API
+--------------------------
+Method: GET
+Endpoint: /current-question/
+Description: Retrieves the current question for the user.
+Authentication: Token-based authentication required.
+
+Response:
+---------
+Success (HTTP 200 OK):
+- With question data
+- With time remaining
+
+Failure (HTTP 204 No Content):
+- No current question set
+
+6. LogoutView API
+------------------
+Method: GET
+Endpoint: /logout/
+Description: Logs out the user by deleting their authentication token.
+Authentication: Token-based authentication required.
+
+Response:
+---------
+Success (HTTP 200 OK):
+{
+    "message": "Logout successful"
+}
+
+7. SubmitView API
+------------------
+Method: POST
+Endpoint: /submit-answer/
+Description: Allows users to submit their answers to MCQs.
+Authentication: Token-based authentication required.
+
+Input:
+------
+- Selected answer option (string)
+
+Response:
+---------
+Success (HTTP 200 OK):
+- With new question data
+
+Failure (HTTP 500 Internal Server Error):
+- Submission fails
+
+8. ResultPageView API
+----------------------
+Method: GET
+Endpoint: /result-page/
+Description: Retrieves user's result page with statistics.
+Authentication: Token-based authentication required.
+
+Response:
+---------
+Success (HTTP 200 OK):
+- With user's result data
+
+Failure (HTTP 500 Internal Server Error):
+- Error retrieving result data
+
+9. leaderboardView API
+-----------------------
+Method: GET
+Endpoint: /leaderboard/
+Description: Retrieves the leaderboard data for junior and senior teams.
+Authentication: Not required.
+
+Response:
+---------
+Success (HTTP 200 OK):
+- With leaderboard data
+
+Failure (HTTP 500 Internal Server Error):
+- Error retrieving leaderboard data
+
+10. EncodedDataView API
+-------------------------
+Method: GET
+Endpoint: /encoded-data/
+Description: Generates and returns encoded data for a lifeline.
+Authentication: Token-based authentication required.
+
+Response:
+---------
+Success (HTTP 200 OK):
+- With encoded data
+
+Failure (HTTP 200 OK):
+- Lifeline not available or already used
+

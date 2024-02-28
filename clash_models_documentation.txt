@@ -1,0 +1,63 @@
+=======================================================
+                Models Documentation
+=======================================================
+
+1. Mcq Model
+-------------
+Description: Represents a multiple-choice question.
+Attributes:
+- question_id (Primary Key): Integer field representing the unique identifier for the question.
+- question_md: CharField representing the Markdown content of the question.
+- a, b, c, d: CharFields representing the options for the question.
+- correct: CharField representing the correct option, selected from choices (a, b, c, d).
+- author: CharField representing the author of the question.
+- authors_note: CharField representing any additional note from the author (optional).
+- senior: BooleanField indicating whether the question is for senior teams.
+- correct_responses: IntegerField representing the count of correct responses to the question.
+- total_responses: IntegerField representing the total count of responses to the question.
+
+2. CustomUser Model
+--------------------
+Description: Represents a custom user in the system.
+Attributes:
+- team_id (Primary Key): CharField representing the unique identifier for the user's team.
+- email: EmailField representing the email address of the user (unique).
+- username: CharField representing the username of the user (unique).
+- teammate_one: CharField representing the name of the first teammate.
+- teammate_two: CharField representing the name of the second teammate (optional).
+- team_score: IntegerField representing the score of the user's team.
+- current_question: IntegerField representing the ID of the current question for the user.
+- previous_question: BooleanField indicating whether the user answered the previous question correctly.
+- question_streak: IntegerField representing the streak of correct answers for the user.
+- senior_team: BooleanField indicating whether the user's team is a senior team.
+- Questions_to_list: TextField representing the list of remaining questions for the user.
+- total_questions: IntegerField representing the total number of questions attempted by the user.
+- correct_questions: IntegerField representing the total number of questions answered correctly by the user.
+- is_first_visit: BooleanField indicating whether it's the user's first visit (used for setting end_time).
+- end_time: DateTimeField representing the end time for answering questions.
+- is_skip_question: BooleanField indicating whether the user can skip a question.
+
+3. Submission Model
+--------------------
+Description: Represents a submission made by a user for a particular question.
+Attributes:
+- submission_id (Primary Key): AutoField representing the unique identifier for the submission.
+- user_id: ForeignKey representing the user who made the submission.
+- question_id: ForeignKey representing the MCQ for which the submission is made.
+- selected_option: CharField representing the option selected by the user (choices: A, B, C, D).
+- status: BooleanField representing whether the submission was correct or not.
+- submitted_at: DateTimeField representing the timestamp when the submission was made.
+- current_grading: IntegerField representing the score obtained for the submission.
+
+4. StreakLifeline Model
+------------------------
+Description: Represents the streak lifeline status for a user.
+Attributes:
+- user: OneToOneField representing the associated user.
+
+5. SkipQuestionLifeline Model
+------------------------------
+Description: Represents the skip question lifeline status for a user.
+Attributes:
+- user: OneToOneField representing the associated user.
+
