@@ -34,7 +34,7 @@ def if_end_time_exceeded(request):
     return False
 
 
-# TODO @permission_classes([IsAuthenticated])
+#TODO @permission_classes([IsAuthenticated])
 @api_view(['GET'])
 def endpoints(request):
     available_endpoints = [

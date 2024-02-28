@@ -5,9 +5,9 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager, Group, Permission
 from django.utils import timezone
 import uuid
-from rest_framework.authtoken.models import Token
-from datetime import datetime, timedelta
-import random
+# from rest_framework.authtoken.models import Token
+# from datetime import datetime, timedelta
+# import random
 
 from django.contrib.auth import get_user_model
 
