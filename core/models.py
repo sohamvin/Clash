@@ -96,3 +96,13 @@ class StreakLifeline(models.Model):
 
 class SkipQuestionLifeline(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+
+class Message(models.Model):
+    user_id=models.ForeignKey(CustomUser,default=1, on_delete=models.CASCADE)
+    user_message = models.TextField()
+    bot_message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user_message} - {self.bot_message}"
+

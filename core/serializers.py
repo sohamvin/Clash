@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Mcq, Submission, CustomUser, StreakLifeline
+from .models import Mcq, Submission, CustomUser, StreakLifeline,Message
 import random
 
 class McqEncodedSerializer(serializers.ModelSerializer):
@@ -86,3 +86,9 @@ class StreakLifelineSerializer(serializers.ModelSerializer):
     class Meta:
         model = StreakLifeline
         fields = '__all__'
+
+class MessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message
+        exclude = ['id']
+
