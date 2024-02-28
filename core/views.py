@@ -1,4 +1,5 @@
 from django.shortcuts import redirect
+from django.db.models import Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -353,3 +354,68 @@ class EncodedDataView(APIView):
             serializer = McqEncodedSerializer(mcqs, many=True)
             enc_data = function(serializer.data)
             return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)
+
+
+class RequestAudiencePollLifeline(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        current_ques = user.current_question
+        if user.audiance_poll:
+            return Response({"messege": "already used"}, status=status.HTTP_400_BAD_REQUEST)
+        # Logic to process audience poll request and return correct answer
+        # This could involve querying the database for responses and calculating the correct answer
+        user.audiance_poll = True
+        user.save()
+        correct_answer_percentages = calculate_correct_answer_percentage(current_question_id=current_ques)
+        return Response({"correct_answer_percentages": correct_answer_percentages}, status=status.HTTP_200_OK)
+
+
+def calculate_correct_answer_percentage(current_question_id):
+    # Retrieve all submissions for the given question
+    all_submissions_for_question = Submission.objects.filter(question_id=current_question_id)
+
+    # Count the total number of submissions for the question
+    total_submissions = all_submissions_for_question.count()
+
+    # Check if total submissions is 0
+    if total_submissions == 0:
+        mcq = Mcq.objects.get(question_id=current_question_id)
+        mcq_ser = McqSerializer(mcq).data
+        correct_option = mcq.correct.lower()
+        rand_num1 = random.randint(50, 60)
+        percentage_options = {correct_option: rand_num1}
+
+        # Generate random percentages for other options
+        all_options = ['a', 'b', 'c', 'd']
+        # random_percentages = [random.randint(1,44) for _ in range(len(all_options) - 1)]
+        # random_percentages.append(100 - sum(random_percentages))
+        rand_num2 = 100 - rand_num1
+        rand_num3 = random.randint(1, rand_num2)
+        rand_num4 = random.randint(1, rand_num2 - rand_num3)
+        rand_num5 = rand_num2 - rand_num3 - rand_num4
+        random_percentages = [rand_num3, rand_num4, rand_num5]
+        for option in all_options:
+            if option != correct_option:
+                percentage_options[option] = random_percentages.pop()
+
+        return percentage_options
+
+    # Count the occurrences of each option in the submissions
+    option_counts = all_submissions_for_question.values('selected_option').annotate(count=Count('selected_option'))
+
+    # Create a dictionary to store the counts of each option
+    option_count_dict = {option['selected_option']: option['count'] for option in option_counts}
+
+    # Calculate percentages for each option
+    percentage_options = []
+    all_options = ['a', 'b', 'c', 'd']
+    for option in all_options:
+        count = option_count_dict.get(option, 0)  # Get the count for the option, default to 0 if not found
+        percentage = (count / total_submissions) * 100
+        option_percentage = {'option': option, 'percentage': percentage}
+        percentage_options.append(option_percentage)
+
+    return percentage_options
