@@ -23,6 +23,9 @@ import os
 from dotenv import load_dotenv
 import requests
 load_dotenv()
+import google.generativeai as genai
+
+
 
 User = get_user_model()
 
@@ -442,7 +445,11 @@ class ChatView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         user= request.user
         user_message = request.data.get('message')
-        bot_message = self.get_ai_response(user_message)
+
+        if Message.objects.filter(user_id = user.team_id):
+            return Response({"messege": "get lost"}, status=status.HTTP_403_FORBIDDEN)
+
+        bot_message = self.getgemini(user_message)
         payload_to_serializer = {
                 "user_id": user.team_id,
                 'user_message': user_message,
@@ -453,49 +460,61 @@ class ChatView(generics.ListCreateAPIView):
         serializer.save()
         return Response(serializer.data)
 
-    def get_ai_response(self, user_input: str) -> str:
-        # Set up the API endpoint and headers
-        endpoint = "https://api.openai.com/v1/chat/completions"
-        headers = {
-            "Authorization": "Bearer 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",
-            "Content-Type": "application/json",
-        }
+    def getgemini(self, messg):
+        genai.configure(api_key=str(os.getenv("GEMINI_KEY")))
 
-        # Data payload
-        messages = self.get_existing_messages()
-        messages.append({"role": "user", "content": f"{user_input}"})
-        data = {
-            "model": "gpt-3.5-turbo",
-            "messages": messages,
-            "temperature": 0.7
-        }
+        model = genai.GenerativeModel('gemini-pro')
 
-        # Make the API request
-        response = requests.post(endpoint, headers=headers, json=data)
-        response_data = response.json()
+        response = model.generate_content(str(messg) + ". also, when you send the response dont use the ** or such operators."
+                                                     "send a continuouls string as response")
 
-        # Check if there's an error in the response
-        if 'error' in response_data:
-            error_message = response_data['error']['message']
+        print(response.text)
 
-            return f"Error: {error_message}"
+        return response.text
 
-        # Check if 'choices' key exists in response_data
-        if 'choices' in response_data:
-            ai_message = response_data['choices'][0]['message']['content']
-            return ai_message
-        else:
-            # Handle the case where 'choices' key is not present
-            print("Unexpected response format from AI API")
-            return "Error: Unexpected response format"
-    def get_existing_messages(self) -> list:
-        """
-        Get all messages from the database and format them for the API.
-        """
-        formatted_messages = []
-
-        for message in Message.objects.values('user_message', 'bot_message'):
-            formatted_messages.append({"role": "user", "content": message['user_message']})
-            formatted_messages.append({"role": "assistant", "content": message['bot_message']})
-
-        return formatted_messages
+    # def get_ai_response(self, user_input: str) -> str:
+    #     # Set up the API endpoint and headers
+    #     endpoint = "https://api.openai.com/v1/chat/completions"
+    #     headers = {
+    #         "Authorization": "Bearer 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",
+    #         "Content-Type": "application/json",
+    #     }
+    #
+    #     # Data payload
+    #     messages = self.get_existing_messages()
+    #     messages.append({"role": "user", "content": f"{user_input}"})
+    #     data = {
+    #         "model": "gpt-3.5-turbo",
+    #         "messages": messages,
+    #         "temperature": 0.7
+    #     }
+    #
+    #     # Make the API request
+    #     response = requests.post(endpoint, headers=headers, json=data)
+    #     response_data = response.json()
+    #
+    #     # Check if there's an error in the response
+    #     if 'error' in response_data:
+    #         error_message = response_data['error']['message']
+    #
+    #         return f"Error: {error_message}"
+    #
+    #     # Check if 'choices' key exists in response_data
+    #     if 'choices' in response_data:
+    #         ai_message = response_data['choices'][0]['message']['content']
+    #         return ai_message
+    #     else:
+    #         # Handle the case where 'choices' key is not present
+    #         print("Unexpected response format from AI API")
+    #         return "Error: Unexpected response format"
+    # def get_existing_messages(self) -> list:
+    #     """
+    #     Get all messages from the database and format them for the API.
+    #     """
+    #     formatted_messages = []
+    #
+    #     for message in Message.objects.values('user_message', 'bot_message'):
+    #         formatted_messages.append({"role": "user", "content": message['user_message']})
+    #         formatted_messages.append({"role": "assistant", "content": message['bot_message']})
+    #
+    #     return formatted_messages
