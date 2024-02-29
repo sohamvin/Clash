@@ -12,4 +12,5 @@ urlpatterns = [
     path('result_page/', ResultPageView.as_view(), name='result-view'),
     path('leaderboard/', leaderboardView.as_view(), name='leaderboard-view'),
     path('streak_lifeline/', EncodedDataView.as_view()),
+    path('audience_poll/', RequestAudiencePollLifeline.as_view(), name='audience-poll-view'),
 ]

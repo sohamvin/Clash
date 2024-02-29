@@ -62,7 +62,7 @@ class CustomUser(AbstractUser):
     correct_questions = models.IntegerField(default=0, blank=False)
     is_first_visit = models.BooleanField(default=True, blank=False) # to set the end_time at first visit
     end_time = models.DateTimeField(null=True, blank=True, default=timezone.now)
-    audiance_poll = models.BooleanField(default=False)
+    audience_poll = models.BooleanField(default=False)
     is_skip_question = models.BooleanField(default=True, blank=False)
     objects = CustomUserManager()
 

@@ -361,61 +361,66 @@ class RequestAudiencePollLifeline(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        current_ques = user.current_question
-        if user.audiance_poll:
-            return Response({"messege": "already used"}, status=status.HTTP_400_BAD_REQUEST)
-        # Logic to process audience poll request and return correct answer
-        # This could involve querying the database for responses and calculating the correct answer
-        user.audiance_poll = True
-        user.save()
-        correct_answer_percentages = calculate_correct_answer_percentage(current_question_id=current_ques)
-        return Response({"correct_answer_percentages": correct_answer_percentages}, status=status.HTTP_200_OK)
+        try:
+            user = request.user
+            current_question_id = user.current_question
+
+            if user.audience_poll:
+                return Response({"message": "Audience poll already used."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.audience_poll = True
+            user.save()
+
+            correct_answer_percentages = self.calculate_correct_answer_percentage(current_question_id)
+            
+            return Response({"correct_answer_percentages": correct_answer_percentages}, status=status.HTTP_200_OK)
+        
+        except Mcq.DoesNotExist:
+            return Response({"message": "Question does not exist."}, status=status.HTTP_404_NOT_FOUND)
+        
+        except Exception as e:
+            return Response({"message": "Internal server error.", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-def calculate_correct_answer_percentage(current_question_id):
-    # Retrieve all submissions for the given question
-    all_submissions_for_question = Submission.objects.filter(question_id=current_question_id)
+    def calculate_correct_answer_percentage(self, current_question_id):
+        try:
+            all_submissions_for_question = Submission.objects.filter(question_id=current_question_id)
+            total_submissions = all_submissions_for_question.count()
 
-    # Count the total number of submissions for the question
-    total_submissions = all_submissions_for_question.count()
+            if total_submissions == 0:
+                mcq = Mcq.objects.get(question_id=current_question_id)
+                mcq_ser = McqSerializer(mcq).data
+                correct_option = mcq.correct.lower()
+                rand_num1 = random.randint(50, 60)
+                rand_num2 = 100 - rand_num1
+                random_percentages = self.generate_random_percentages(rand_num1, rand_num2)
+                percentage_options = {correct_option: float(rand_num1)}
 
-    # Check if total submissions is 0
-    if total_submissions == 0:
-        mcq = Mcq.objects.get(question_id=current_question_id)
-        mcq_ser = McqSerializer(mcq).data
-        correct_option = mcq.correct.lower()
-        rand_num1 = random.randint(50, 60)
-        percentage_options = {correct_option: rand_num1}
+                for option in ['a', 'b', 'c', 'd']:
+                    if option != correct_option:
+                        percentage_options[option] = float(random_percentages.pop())
 
-        # Generate random percentages for other options
-        all_options = ['a', 'b', 'c', 'd']
-        # random_percentages = [random.randint(1,44) for _ in range(len(all_options) - 1)]
-        # random_percentages.append(100 - sum(random_percentages))
-        rand_num2 = 100 - rand_num1
-        rand_num3 = random.randint(1, rand_num2)
-        rand_num4 = random.randint(1, rand_num2 - rand_num3)
-        rand_num5 = rand_num2 - rand_num3 - rand_num4
-        random_percentages = [rand_num3, rand_num4, rand_num5]
-        for option in all_options:
-            if option != correct_option:
-                percentage_options[option] = random_percentages.pop()
+                return percentage_options
 
-        return percentage_options
+            option_counts = all_submissions_for_question.values('selected_option').annotate(count=Count('selected_option'))
+            option_count_dict = {option['selected_option']: option['count'] for option in option_counts}
+            percentage_options = {}
 
-    # Count the occurrences of each option in the submissions
-    option_counts = all_submissions_for_question.values('selected_option').annotate(count=Count('selected_option'))
+            for option in ['a', 'b', 'c', 'd']:
+                count = option_count_dict.get(option, 0)
+                percentage = (count / total_submissions) * 100
+                percentage_options[option] = percentage
 
-    # Create a dictionary to store the counts of each option
-    option_count_dict = {option['selected_option']: option['count'] for option in option_counts}
+            return percentage_options
+        
+        except Mcq.DoesNotExist:
+            return Response({"message": "Question does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-    # Calculate percentages for each option
-    percentage_options = []
-    all_options = ['a', 'b', 'c', 'd']
-    for option in all_options:
-        count = option_count_dict.get(option, 0)  # Get the count for the option, default to 0 if not found
-        percentage = (count / total_submissions) * 100
-        option_percentage = {'option': option, 'percentage': percentage}
-        percentage_options.append(option_percentage)
+        except Exception as e:
+            return Response({"message": "Internal server error.", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    return percentage_options
+    def generate_random_percentages(self, num1, num2):
+        rand_num3 = random.randint(1, num2)
+        rand_num4 = random.randint(1, num2 - rand_num3)
+        rand_num5 = num2 - rand_num3 - rand_num4
+        return [rand_num3, rand_num4, rand_num5]
