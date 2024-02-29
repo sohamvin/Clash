@@ -4,8 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Mcq, Submission, CustomUser, StreakLifeline, SkipQuestionLifeline
-from .serializers import McqSerializer, McqEncodedSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer
+from .models import Mcq, Submission, CustomUser, StreakLifeline, SkipQuestionLifeline, Message
+from .serializers import McqSerializer, McqEncodedSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer, MessageSerializer
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
@@ -18,6 +18,11 @@ from django.contrib.auth import get_user_model
 import random
 from django.utils import timezone
 from .Streak import function
+from rest_framework import generics
+import os
+from dotenv import load_dotenv
+import requests
+load_dotenv()
 
 User = get_user_model()
 
@@ -419,3 +424,71 @@ def calculate_correct_answer_percentage(current_question_id):
         percentage_options.append(option_percentage)
 
     return percentage_options
+
+
+class ChatView(generics.ListCreateAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+
+    def post(self, request, *args, **kwargs):
+        user= request.user
+        user_message = request.data.get('message')
+        bot_message = self.get_ai_response(user_message)
+        payload_to_serializer = {
+                "user_id": user.team_id,
+                'user_message': user_message,
+                'bot_message': bot_message
+                }
+        serializer = self.get_serializer(data=payload_to_serializer)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def get_ai_response(self, user_input: str) -> str:
+        # Set up the API endpoint and headers
+        endpoint = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": "Bearer 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",
+            "Content-Type": "application/json",
+        }
+
+        # Data payload
+        messages = self.get_existing_messages()
+        messages.append({"role": "user", "content": f"{user_input}"})
+        data = {
+            "model": "gpt-3.5-turbo",
+            "messages": messages,
+            "temperature": 0.7
+        }
+
+        # Make the API request
+        response = requests.post(endpoint, headers=headers, json=data)
+        response_data = response.json()
+
+        # Check if there's an error in the response
+        if 'error' in response_data:
+            error_message = response_data['error']['message']
+
+            return f"Error: {error_message}"
+
+        # Check if 'choices' key exists in response_data
+        if 'choices' in response_data:
+            ai_message = response_data['choices'][0]['message']['content']
+            return ai_message
+        else:
+            # Handle the case where 'choices' key is not present
+            print("Unexpected response format from AI API")
+            return "Error: Unexpected response format"
+    def get_existing_messages(self) -> list:
+        """
+        Get all messages from the database and format them for the API.
+        """
+        formatted_messages = []
+
+        for message in Message.objects.values('user_message', 'bot_message'):
+            formatted_messages.append({"role": "user", "content": message['user_message']})
+            formatted_messages.append({"role": "assistant", "content": message['bot_message']})
+
+        return formatted_messages
