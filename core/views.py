@@ -25,6 +25,10 @@ import requests
 load_dotenv()
 import google.generativeai as genai
 
+pointer = 0
+
+arr= [str(os.getenv("GEMINI_KEY1")), str(os.getenv("GEMINI_KEY"))]
+
 
 
 User = get_user_model()
@@ -342,26 +346,29 @@ class EncodedDataView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        try:
-            streak = StreakLifeline.objects.get(user=user)
-        except StreakLifeline.DoesNotExist:
-            streak = None
+        if not if_end_time_exceeded(request):
+            user = request.user
+            try:
+                streak = StreakLifeline.objects.get(user=user)
+            except StreakLifeline.DoesNotExist:
+                streak = None
 
-        if streak != None or user.question_streak != 1:
-            return Response({"Message": "Lifeline not available or already used"}, status=status.HTTP_200_OK)
-        if user.question_streak == 1:
-            StreakLifeline.objects.create(user=user)
-            li = []
-            li.append(user.current_question)
-            questions_list_str = user.Questions_to_list
-            questions_list = questions_list_str.split(',')
-            li.extend(questions_list[:1])
+            if streak != None or user.question_streak != 1:
+                return Response({"Message": "Lifeline not available or already used"}, status=status.HTTP_200_OK)
+            if user.question_streak == 1:
+                StreakLifeline.objects.create(user=user)
+                li = []
+                li.append(user.current_question)
+                questions_list_str = user.Questions_to_list
+                questions_list = questions_list_str.split(',')
+                li.extend(questions_list[:1])
 
-            mcqs = Mcq.objects.filter(question_id__in=li)
-            serializer = McqEncodedSerializer(mcqs, many=True)
-            enc_data = function(serializer.data)
-            return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)
+                mcqs = Mcq.objects.filter(question_id__in=li)
+                serializer = McqEncodedSerializer(mcqs, many=True)
+                enc_data = function(serializer.data)
+                return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)
+            else:
+                return redirect('result-view')
 
 
 class RequestAudiencePollLifeline(APIView):
@@ -369,26 +376,29 @@ class RequestAudiencePollLifeline(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        try:
-            user = request.user
-            current_question_id = user.current_question
+        if not if_end_time_exceeded(request):
+            try:
+                user = request.user
+                current_question_id = user.current_question
 
-            if user.audience_poll:
-                return Response({"message": "Audience poll already used."}, status=status.HTTP_400_BAD_REQUEST)
+                if user.audience_poll:
+                    return Response({"message": "Audience poll already used."}, status=status.HTTP_400_BAD_REQUEST)
 
-            user.audience_poll = True
-            user.save()
+                user.audience_poll = True
+                user.save()
 
-            correct_answer_percentages = self.calculate_correct_answer_percentage(current_question_id)
+                correct_answer_percentages = self.calculate_correct_answer_percentage(current_question_id)
 
-            return Response({"correct_answer_percentages": correct_answer_percentages}, status=status.HTTP_200_OK)
+                return Response({"correct_answer_percentages": correct_answer_percentages}, status=status.HTTP_200_OK)
 
-        except Mcq.DoesNotExist:
-            return Response({"message": "Question does not exist."}, status=status.HTTP_404_NOT_FOUND)
+            except Mcq.DoesNotExist:
+                return Response({"message": "Question does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-        except Exception as e:
-            return Response({"message": "Internal server error.", "error": str(e)},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                return Response({"message": "Internal server error.", "error": str(e)},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return redirect('result-view')
 
     def calculate_correct_answer_percentage(self, current_question_id):
         try:
@@ -443,33 +453,39 @@ class ChatView(generics.ListCreateAPIView):
     serializer_class = MessageSerializer
 
     def post(self, request, *args, **kwargs):
-        user= request.user
-        user_message = request.data.get('message')
+        if not if_end_time_exceeded(request):
+            user= request.user
+            user_message = request.data.get('message')
 
-        if Message.objects.filter(user_id = user.team_id):
-            return Response({"messege": "get lost"}, status=status.HTTP_403_FORBIDDEN)
+            if Message.objects.filter(user_id = user.team_id):
+                return Response({"messege": "get lost"}, status=status.HTTP_403_FORBIDDEN)
 
-        bot_message = self.getgemini(user_message)
-        payload_to_serializer = {
-                "user_id": user.team_id,
-                'user_message': user_message,
-                'bot_message': bot_message
-                }
-        serializer = self.get_serializer(data=payload_to_serializer)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+            bot_message = self.getgemini(user_message)
+            payload_to_serializer = {
+                    "user_id": user.team_id,
+                    'user_message': user_message,
+                    'bot_message': bot_message
+                    }
+            serializer = self.get_serializer(data=payload_to_serializer)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return redirect('result-view')
 
     def getgemini(self, messg):
-        genai.configure(api_key=str(os.getenv("GEMINI_KEY")))
+        global pointer
+        genai.configure(api_key=arr[pointer])
+
+        pointer = (pointer+1)%(int(os.getenv("SIZE")))
 
         model = genai.GenerativeModel('gemini-pro')
 
+        print(arr[pointer])
+
         response = model.generate_content(str(messg) + ". also, when you send the response dont use the ** or such operators."
-                                                     "send a continuouls string as response")
-
-        print(response.text)
-
+                                                     "send a continuous string as response")
+        # print(response.text)
         return response.text
 
     # def get_ai_response(self, user_input: str) -> str:
