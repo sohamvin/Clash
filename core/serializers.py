@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Mcq, Submission, CustomUser, StreakLifeline, Message
+from .models import Mcq, Submission, CustomUser, StreakLifeline, Message, AudiancePoll
 import random
 
 class McqEncodedSerializer(serializers.ModelSerializer):
@@ -88,7 +88,15 @@ class StreakLifelineSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class MessageSerializer(serializers.ModelSerializer):
+    # id = serializers.IntegerField(write_only=True)  # Change to accept question_id as integer
+    # question = serializers.PrimaryKeyRelatedField(queryset=Mcq.objects.all(), write_only=True)  # Make question write-only
     class Meta:
         model = Message
-        exclude = ['id']
+        fields = '__all__'
+
+
+class AudiancePollSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AudiancePoll
+        fields = '__all__'
 

@@ -4,8 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from .models import Mcq, Submission, CustomUser, StreakLifeline, SkipQuestionLifeline, Message
-from .serializers import McqSerializer, McqEncodedSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer, MessageSerializer
+from .models import Mcq, Submission, CustomUser, StreakLifeline, SkipQuestionLifeline, Message, AudiancePoll
+from .serializers import McqSerializer, McqEncodedSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer, MessageSerializer, AudiancePoll
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
@@ -20,15 +20,16 @@ from django.utils import timezone
 from .Streak import function
 from rest_framework import generics
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import requests
-load_dotenv()
+# load_dotenv()
 import google.generativeai as genai
 
 pointer = 0
 
-arr= [str(os.getenv("GEMINI_KEY1")), str(os.getenv("GEMINI_KEY"))]
+# arr= [str(os.getenv("GEMINI_KEY1")), str(os.getenv("GEMINI_KEY"))]
 
+arr = ["AIzaSyCi7p8oBpIwtIcaOVFp2Lf925-ZxBUqcmo","AIzaSyDUK7hhkajiWBSNXeAv7E7sduozkXFwdwo"]
 
 
 User = get_user_model()
@@ -38,6 +39,9 @@ POSTIVE_MARKS_2 = 2
 
 NEGATIVE_MARKS_1 = -2
 NEGATIVE_MARKS_2 = -1
+
+SKIP_QUESTION_POSITIVE = 1
+SKIP_QUESTION_NEGATIVE = -1
 
 
 def if_end_time_exceeded(request):
@@ -100,44 +104,58 @@ class SkipMcqView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        try:
-            skip_object = SkipQuestionLifeline.objects.get(user=user)
-        except SkipQuestionLifeline.DoesNotExist:
-            skip_object = None
-        # Check if the lifeline is available and has not been used yet
-        if skip_object != None:
-            return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
-        else:
-            if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request):
+            user = request.user
+            
+            user.positive = SKIP_QUESTION_POSITIVE
+            user.negative = SKIP_QUESTION_NEGATIVE
+            
+            user.save()
+
+            skip_object = SkipQuestionLifeline.objects.filter(user=user).first()
+            
+            mcq = Mcq.objects.get(question_id = user.current_question)
+            
+            if skip_object:
+                if skip_object.question == mcq:
+                    ser = McqSerializer(mcq)
+                    return Response(ser.data, {"positive": user.positive, "negative": user.negative} ,status=status.HTTP_200_OK)
+                else:
+                    return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
+            # print(mcq, skip_object.question)
+            if not skip_object:
+
                 try:
-                    SkipQuestionLifeline.objects.create(user=user) 
                     questions_list_str = user.Questions_to_list
                     questions_list = questions_list_str.split(',')
-                    
-                    # Ensure questions are available
+                        
+                        # Ensure questions are available
                     if not questions_list:
                         return Response({"Message": "Last question"}, status=status.HTTP_204_NO_CONTENT)
 
-                    # Select a random question ID from the remaining questions
+                        # Select a random question ID from the remaining questions
                     qid = random.choice(questions_list)
                     questions_list.remove(qid)
-                    
-                    # Update the user's remaining questions list
+                        
+                        # Update the user's remaining questions list
                     strs = ",".join(map(str, questions_list))
                     user.Questions_to_list = strs
                     user.current_question = qid
                     user.is_skip_question = False  # Set the lifeline flag to False indicating it's been used
                     user.save()
 
-                    # Retrieve and serialize the selected question
-                    mcq = Mcq.objects.get(question_id=qid, senior=user.senior_team)
-                    ser = McqSerializer(mcq)
+                        # Retrieve and serialize the selected question
+                    mcq1 = Mcq.objects.get(question_id=qid, senior=user.senior_team)
+                    ser = McqSerializer(mcq1)
+                    skip_object = SkipQuestionLifeline.objects.create(user=user, question = mcq1)
+                    skip_object.save()
                     return Response(ser.data, status=status.HTTP_200_OK)
                 except Exception as e:
                     return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
-                return redirect('result-view')
+                return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            return redirect('result-view')  
 
 
 class GetCurrentQuestion(APIView):
@@ -162,7 +180,7 @@ class GetCurrentQuestion(APIView):
                         ser = McqSerializer(mcq)
                         remaining_time = user.end_time - timezone.now()  # Calculate remaining time (using end_time
                         # print(remaining_time.seconds)
-                        return Response({"question_data": ser.data, "time_remaining": remaining_time.seconds}, status=status.HTTP_200_OK)
+                        return Response({"question_data": ser.data, "time_remaining": remaining_time.seconds, "scheme": {"positive": user.positive, "negative": user.negative}}, status=status.HTTP_200_OK)
                     except Mcq.DoesNotExist:
                         return Response({"Message": "Question not found"}, status=status.HTTP_404_NOT_FOUND)
                 else:
@@ -202,13 +220,17 @@ class SubmitView(APIView):
 
                 status_of = False
                 current_score = 0
+                
+                
 
                 if str(mcq.correct) == selected:
                     if user.previous_question:
                         user.question_streak += 1
+                        user.positive = POSTIVE_MARKS_1
                         user.team_score += POSTIVE_MARKS_1
                         current_score += POSTIVE_MARKS_1
                     else:
+                        user.positive = POSTIVE_MARKS_2
                         user.team_score += POSTIVE_MARKS_2
                         current_score += POSTIVE_MARKS_2
                     user.previous_question = True
@@ -221,9 +243,11 @@ class SubmitView(APIView):
 
                 else:
                     if user.previous_question:
+                        user.negative = NEGATIVE_MARKS_1
                         user.team_score += NEGATIVE_MARKS_1
                         current_score += NEGATIVE_MARKS_1
                     else:
+                        user.negative = NEGATIVE_MARKS_2
                         user.team_score += NEGATIVE_MARKS_2
                         current_score += NEGATIVE_MARKS_2
                     user.previous_question = False
@@ -248,7 +272,7 @@ class SubmitView(APIView):
                     new_question_data = self.get_new_question_data(user)
                     # ***** After clicking on submit button the submission will be saved and the new questions data will be sent as a response *****
                     if new_question_data is not None:
-                        return Response(new_question_data, status=status.HTTP_200_OK)
+                        return Response(new_question_data, {"positive": user.positive, "negative": user.negative} ,status=status.HTTP_200_OK)
                     else:
                         return redirect('result-view')
                 else:
@@ -345,31 +369,45 @@ class EncodedDataView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request):     
+        
         if not if_end_time_exceeded(request):
             user = request.user
-            try:
-                streak = StreakLifeline.objects.get(user=user)
-            except StreakLifeline.DoesNotExist:
-                streak = None
+        
+            streak_lifeline = StreakLifeline.objects.filter(user=user).first()
+            mcq = Mcq.objects.get(question_id = user.current_question)
+            
+            if streak_lifeline:
+                if streak_lifeline.question == mcq:
+                    li = []
+                    li.append(user.current_question)
+                    questions_list_str = user.Questions_to_list
+                    questions_list = questions_list_str.split(',')
+                    li.extend(questions_list[:1])
 
-            if streak != None or user.question_streak != 1:
-                return Response({"Message": "Lifeline not available or already used"}, status=status.HTTP_200_OK)
-            if user.question_streak == 1:
-                StreakLifeline.objects.create(user=user)
-                li = []
-                li.append(user.current_question)
-                questions_list_str = user.Questions_to_list
-                questions_list = questions_list_str.split(',')
-                li.extend(questions_list[:1])
-
-                mcqs = Mcq.objects.filter(question_id__in=li)
-                serializer = McqEncodedSerializer(mcqs, many=True)
-                enc_data = function(serializer.data)
-                return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)
+                    mcqs = Mcq.objects.filter(question_id__in=li)
+                    serializer = McqEncodedSerializer(mcqs, many=True)
+                    enc_data = function(serializer.data)
+                    return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
             else:
-                return redirect('result-view')
+                if int(user.question_streak) == 1:
+                    StreakLifeline.objects.create(user=user, question = mcq)
+                    li = []
+                    li.append(user.current_question)
+                    questions_list_str = user.Questions_to_list
+                    questions_list = questions_list_str.split(',')
+                    li.extend(questions_list[:1])
 
+                    mcqs = Mcq.objects.filter(question_id__in=li)
+                    serializer = McqEncodedSerializer(mcqs, many=True)
+                    enc_data = function(serializer.data)
+                    return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)
+                else:
+                    return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            return redirect('result-view')
 
 class RequestAudiencePollLifeline(APIView):
     authentication_classes = [TokenAuthentication]
@@ -380,17 +418,21 @@ class RequestAudiencePollLifeline(APIView):
             try:
                 user = request.user
                 current_question_id = user.current_question
-
-                if user.audience_poll:
-                    return Response({"message": "Audience poll already used."}, status=status.HTTP_400_BAD_REQUEST)
-
-                user.audience_poll = True
-                user.save()
-
-                correct_answer_percentages = self.calculate_correct_answer_percentage(current_question_id)
-
-                return Response({"correct_answer_percentages": correct_answer_percentages}, status=status.HTTP_200_OK)
-
+                mcq = Mcq.objects.get(question_id = current_question_id)
+                audiancepoll = AudiancePoll.objects.filter(user = user).first()
+                if audiancepoll:
+                    if audiancepoll.question == mcq:
+                        correct_answer_percentages = audiancepoll.poll
+                        return Response({"correct_answer_percentages": correct_answer_percentages}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({"message": "Audience poll already used."}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    correct_answer_percentages = self.calculate_correct_answer_percentage(current_question_id)
+                    audiancepoll = AudiancePoll.objects.create(user = user , question = mcq, poll = correct_answer_percentages)
+                    user.audience_poll = True
+                    user.save()
+                    return Response({"correct_answer_percentages": correct_answer_percentages}, status=status.HTTP_200_OK)
+                
             except Mcq.DoesNotExist:
                 return Response({"message": "Question does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -446,30 +488,36 @@ class RequestAudiencePollLifeline(APIView):
         return [rand_num3, rand_num4, rand_num5]
 
 
-class ChatView(generics.ListCreateAPIView):
+class ChatView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-    queryset = Message.objects.all()
-    serializer_class = MessageSerializer
 
     def post(self, request, *args, **kwargs):
         if not if_end_time_exceeded(request):
             user= request.user
+            mcq1 = Mcq.objects.filter(question_id=user.current_question).first()
             user_message = request.data.get('message')
-
-            if Message.objects.filter(user_id = user.team_id):
-                return Response({"messege": "get lost"}, status=status.HTTP_403_FORBIDDEN)
-
-            bot_message = self.getgemini(user_message)
-            payload_to_serializer = {
-                    "user_id": user.team_id,
-                    'user_message': user_message,
-                    'bot_message': bot_message
-                    }
-            serializer = self.get_serializer(data=payload_to_serializer)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
+            
+            gpt = Message.objects.filter(user_id = user.team_id).first()
+            
+            if gpt:
+                if gpt.question == mcq1:
+                    ser = MessageSerializer(gpt, many=False)
+                    return Response(ser.data, status=status.HTTP_200_OK)
+                else:
+                    return Response({"message": "Cannot access"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                bot_message = self.getgemini(user_message)
+                payload_to_serializer = {
+                        "user_id": user.team_id,
+                        'user_message': user_message,
+                        'bot_message': bot_message,
+                        'question': mcq1.question_id
+                        }
+                serializer = MessageSerializer(data=payload_to_serializer)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response(serializer.data)
         else:
             return redirect('result-view')
 
@@ -477,11 +525,11 @@ class ChatView(generics.ListCreateAPIView):
         global pointer
         genai.configure(api_key=arr[pointer])
 
-        pointer = (pointer+1)%(int(os.getenv("SIZE")))
+        pointer = (pointer+1)%2
 
         model = genai.GenerativeModel('gemini-pro')
 
-        print(arr[pointer])
+        print(arr[0])
 
         response = model.generate_content(str(messg) + ". also, when you send the response dont use the ** or such operators."
                                                      "send a continuous string as response")
@@ -534,3 +582,44 @@ class ChatView(generics.ListCreateAPIView):
     #         formatted_messages.append({"role": "assistant", "content": message['bot_message']})
     #
     #     return formatted_messages
+    
+
+
+class AllLifelines(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        
+        streak = StreakLifeline.objects.filter(user=user).first()
+        audiance = AudiancePoll.objects.filter(user=user).first()
+        gpt = Message.objects.filter(user_id=user).first()
+        skip = SkipQuestionLifeline.objects.filter(user=user).first()
+        
+        payload = {
+            "streak": True,
+            "audiance": True,
+            "skip": True,
+            "gpt": True
+        }
+        
+        if audiance:
+            payload["audiance"] = False
+        if skip:
+            payload["skip"]= False
+        if gpt:
+            payload["gpt"] = False
+        
+        if streak or (not streak and int(user.question_streak) != 1):
+            # print((not streak and int(user.question_streak) != 1))
+            # print(streak)
+            payload["streak"] = False
+        
+        
+        return Response(payload, status=status.HTTP_200_OK)
+        
+        
+        
+        
+        

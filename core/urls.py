@@ -14,4 +14,5 @@ urlpatterns = [
     path('streak_lifeline/', EncodedDataView.as_view()),
     path('audiance_poll/', RequestAudiencePollLifeline.as_view()),
     path('gpt/', ChatView.as_view()),
+    path('all_lifelines/', AllLifelines.as_view()),
 ]

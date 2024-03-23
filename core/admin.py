@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Mcq,Submission, CustomUser, StreakLifeline, SkipQuestionLifeline, Message
+from .models import Mcq,Submission, CustomUser, StreakLifeline, SkipQuestionLifeline, Message, AudiancePoll
 
 # LATEST COMMIT ON Dev_sujal
 
@@ -7,6 +7,10 @@ from .models import Mcq,Submission, CustomUser, StreakLifeline, SkipQuestionLife
 @admin.register(StreakLifeline)
 class ModelStreakLifeline(admin.ModelAdmin):
     list_display = ['user']
+
+@admin.register(AudiancePoll)
+class  ModelAudiencePoll(admin.ModelAdmin):
+    list_display = ['user', 'question']
 
 @admin.register(Mcq)
 class ModelMcq(admin.ModelAdmin):
