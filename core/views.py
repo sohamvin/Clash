@@ -119,7 +119,7 @@ class SkipMcqView(APIView):
             if skip_object:
                 if skip_object.question == mcq:
                     ser = McqSerializer(mcq)
-                    return Response(ser.data, {"positive": user.positive, "negative": user.negative} ,status=status.HTTP_200_OK)
+                    return Response(ser.data, status=status.HTTP_200_OK)
                 else:
                     return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
             # print(mcq, skip_object.question)
@@ -149,7 +149,7 @@ class SkipMcqView(APIView):
                     ser = McqSerializer(mcq1)
                     skip_object = SkipQuestionLifeline.objects.create(user=user, question = mcq1)
                     skip_object.save()
-                    return Response(ser.data, status=status.HTTP_200_OK)
+                    return Response(ser.data,status=status.HTTP_200_OK)
                 except Exception as e:
                     return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
@@ -224,13 +224,8 @@ class SubmitView(APIView):
                 if str(mcq.correct) == selected:
                     if user.previous_question:
                         user.question_streak += 1
-                        user.positive = POSTIVE_MARKS_1
-                        user.team_score += POSTIVE_MARKS_1
-                        current_score += POSTIVE_MARKS_1
-                    else:
-                        user.positive = POSTIVE_MARKS_2
-                        user.team_score += POSTIVE_MARKS_2
-                        current_score += POSTIVE_MARKS_2
+                    user.team_score += user.positive
+                    current_score += user.positive
                     user.previous_question = True
                     user.total_questions += 1
                     user.correct_questions += 1
@@ -240,14 +235,8 @@ class SubmitView(APIView):
                     user.question_streak += 1
 
                 else:
-                    if user.previous_question:
-                        user.negative = NEGATIVE_MARKS_1
-                        user.team_score += NEGATIVE_MARKS_1
-                        current_score += NEGATIVE_MARKS_1
-                    else:
-                        user.negative = NEGATIVE_MARKS_2
-                        user.team_score += NEGATIVE_MARKS_2
-                        current_score += NEGATIVE_MARKS_2
+                    user.team_score += user.negative
+                    current_score += user.negative
                     user.previous_question = False
                     user.total_questions += 1
                     mcq.total_responses += 1
@@ -267,10 +256,10 @@ class SubmitView(APIView):
                 ser = SubmissionSerializer(data=payload_to_serializer)
                 if ser.is_valid():
                     ser.save()
-                    new_question_data = self.get_new_question_data(user)
+                    new_question_data = self.get_new_question_data(user, selected)
                     # ***** After clicking on submit button the submission will be saved and the new questions data will be sent as a response *****
                     if new_question_data is not None:
-                        return Response(new_question_data, {"positive": user.positive, "negative": user.negative} ,status=status.HTTP_200_OK)
+                        return Response(new_question_data,status=status.HTTP_200_OK)
                     else:
                         return redirect('result-view')
                 else:
@@ -282,8 +271,16 @@ class SubmitView(APIView):
             return redirect('result-view')
 
 
-    def get_new_question_data(self, user):
+    def get_new_question_data(self, user, selected):
         try:
+            mcq = Mcq.objects.get(question_id=user.current_question)
+            if str(mcq.correct) == selected:
+                user.positive = POSTIVE_MARKS_1
+                user.negative = NEGATIVE_MARKS_1
+            else:
+                user.positive = POSTIVE_MARKS_2
+                user.negative = NEGATIVE_MARKS_2
+            
             questions_list_str = user.Questions_to_list
             questions_list = questions_list_str.split(',')
 
