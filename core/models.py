@@ -50,8 +50,8 @@ class CustomUser(AbstractUser):
     team_id = models.CharField(max_length=256, primary_key=True)
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=256, unique=True) # overrided , but must be team name , not username of user
-    teammate_one = models.CharField(max_length=300)
-    teammate_two = models.CharField(max_length=300, blank=True)
+    teammate_one = models.CharField(max_length=300, unique = True)
+    teammate_two = models.CharField(max_length=300, blank=True, unique = True)
     team_score = models.IntegerField(default=0)
     current_question = models.IntegerField(default=1, blank=False)
     previous_question = models.BooleanField(default=False, blank=False)
