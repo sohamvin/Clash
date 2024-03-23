@@ -1,4 +1,5 @@
 from urllib.parse import quote
+import random
 # from huffman.codec import HuffmanCodec
 
 
@@ -41,9 +42,23 @@ def function(ip_data_in_dicts):
     # Encode a new string
     # new_string = "python"
     # encoded_data = codec.encode(main_str)
-    encoded_data = caesar_cipher(main_str, 7)
+    
+    i = random.randint(1, 25)
+    
+    m = i + ord('A')
+    
+    m = chr(m)
+    
+    
+    
+    encoded_data = caesar_cipher(main_str, i)
+    
+    send = {
+      "encoded_data": encoded_data,
+      "from_to": "A" + " to " + str(m)
+    }
     # print("Encoded:", encoded_data)
-    return encoded_data
+    return send
     # # Decode the encoded data
     # decoded_data = codec.decode(encoded_data)
     # print("Decoded:", decoded_data)

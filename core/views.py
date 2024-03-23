@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .models import Mcq, Submission, CustomUser, StreakLifeline, SkipQuestionLifeline, Message, AudiancePoll
-from .serializers import McqSerializer, McqEncodedSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer, MessageSerializer, AudiancePoll
+from .serializers import McqSerializer, McqEncodedSerializer, SubmissionSerializer, UserRegistrationSerializer, UserLoginSerializer, LeaderboardSerializer, MessageSerializer, AudiancePoll, StreakLifelineSerializer
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
@@ -220,9 +220,7 @@ class SubmitView(APIView):
 
                 status_of = False
                 current_score = 0
-                
-                
-
+        
                 if str(mcq.correct) == selected:
                     if user.previous_question:
                         user.question_streak += 1
@@ -379,21 +377,18 @@ class EncodedDataView(APIView):
             
             if streak_lifeline:
                 if streak_lifeline.question == mcq:
-                    li = []
-                    li.append(user.current_question)
-                    questions_list_str = user.Questions_to_list
-                    questions_list = questions_list_str.split(',')
-                    li.extend(questions_list[:1])
-
-                    mcqs = Mcq.objects.filter(question_id__in=li)
-                    serializer = McqEncodedSerializer(mcqs, many=True)
-                    enc_data = function(serializer.data)
+                    ser = StreakLifelineSerializer(streak_lifeline, many = False)
+                    
+                    enc_data = {
+                        "encoded_data": str(ser.data["message"]),
+                        "from_to": str(ser.data["conversion"])
+                    }
+                    # print(enc_data)
                     return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)
                 else:
                     return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
             else:
                 if int(user.question_streak) == 1:
-                    StreakLifeline.objects.create(user=user, question = mcq)
                     li = []
                     li.append(user.current_question)
                     questions_list_str = user.Questions_to_list
@@ -403,6 +398,7 @@ class EncodedDataView(APIView):
                     mcqs = Mcq.objects.filter(question_id__in=li)
                     serializer = McqEncodedSerializer(mcqs, many=True)
                     enc_data = function(serializer.data)
+                    StreakLifeline.objects.create(user=user, question = mcq, message = str(enc_data["encoded_data"]), conversion = str(enc_data["from_to"]))
                     return Response({"Encoded_data": enc_data}, status=status.HTTP_200_OK)
                 else:
                     return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)

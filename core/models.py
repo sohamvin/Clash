@@ -97,6 +97,8 @@ class Submission(models.Model):
 class StreakLifeline(models.Model):
     question = models.ForeignKey(Mcq, on_delete = models.CASCADE, default = 1)
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    message = models.TextField(default = "NULL")
+    conversion = models.CharField(default = "", max_length=300)
 
 class SkipQuestionLifeline(models.Model):
     question = models.ForeignKey(Mcq, on_delete = models.CASCADE, default =1)
