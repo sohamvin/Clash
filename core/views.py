@@ -1,4 +1,4 @@
-from django.shortcuts import redirect
+# from django.shortcuts import redirect
 from django.db.models import Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -19,7 +19,7 @@ import random
 from django.utils import timezone
 from .Streak import function
 from rest_framework import generics
-import os
+import os   
 # from dotenv import load_dotenv
 import requests
 # load_dotenv()
@@ -88,15 +88,12 @@ class UserLoginView(APIView):
                 token_obj.save()
 
                 response = Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
-
-                response['Authorization'] = "token " + str(token_obj)
-
+                response['Authorization'] = 'token ' + str(token_obj)
                 return response
             else:
                 return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return redirect('result-view')
-
+            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
 
 # ***** SKIP QUESTION LIFELINE *****
 class SkipMcqView(APIView):
@@ -106,6 +103,7 @@ class SkipMcqView(APIView):
     def get(self, request):
         if not if_end_time_exceeded(request):
             user = request.user
+            token_obj, _ = Token.objects.get_or_create(user=user)
             
             user.positive = SKIP_QUESTION_POSITIVE
             user.negative = SKIP_QUESTION_NEGATIVE
@@ -116,12 +114,17 @@ class SkipMcqView(APIView):
             
             mcq = Mcq.objects.get(question_id = user.current_question)
             
+
             if skip_object:
                 if skip_object.question == mcq:
                     ser = McqSerializer(mcq)
-                    return Response(ser.data, status=status.HTTP_200_OK)
+                    response = Response(ser.data, status=status.HTTP_200_OK)
+                    response['Authorization'] = 'token ' + str(token_obj)
+                    return response
                 else:
-                    return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
+                    response = Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
+                    response['Authorization'] = 'token ' + str(token_obj)
+                    return response
             # print(mcq, skip_object.question)
             if not skip_object:
 
@@ -149,13 +152,17 @@ class SkipMcqView(APIView):
                     ser = McqSerializer(mcq1)
                     skip_object = SkipQuestionLifeline.objects.create(user=user, question = mcq1)
                     skip_object.save()
-                    return Response(ser.data,status=status.HTTP_200_OK)
+                    response = Response(ser.data, status=status.HTTP_200_OK)
+                    response['Authorization'] = 'token ' + str(token_obj)
+                    return response
                 except Exception as e:
                     return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
                 return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
         else:
-            return redirect('result-view')  
+            response = Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            response['Authorization'] = 'token ' + str(token_obj)
+            return response
 
 
 class GetCurrentQuestion(APIView):
@@ -165,11 +172,12 @@ class GetCurrentQuestion(APIView):
     def get(self, request):
         if not if_end_time_exceeded(request) or request.user.is_first_visit:
             user = request.user
+            token_obj, _ = Token.objects.get_or_create(user=user)
             try:
                 if request.user.is_first_visit:
                     user.is_first_visit = False
                     # Set end_time for the first visit only
-                    user.end_time = timezone.now() + timedelta(minutes=5)
+                    user.end_time = timezone.now() + timedelta(minutes=20)
                     user.save()
 
                 # print(user.end_time)
@@ -180,7 +188,9 @@ class GetCurrentQuestion(APIView):
                         ser = McqSerializer(mcq)
                         remaining_time = user.end_time - timezone.now()  # Calculate remaining time (using end_time
                         # print(remaining_time.seconds)
-                        return Response({"question_data": ser.data, "time_remaining": remaining_time.seconds, "scheme": {"positive": user.positive, "negative": user.negative}}, status=status.HTTP_200_OK)
+                        response = Response({"question_data": ser.data, "time_remaining": remaining_time.seconds, "scheme": {"positive": user.positive, "negative": user.negative}, "token": str(token_obj)}, status=status.HTTP_200_OK)
+                        response['Authorization'] = 'token ' + str(token_obj)
+                        return response
                     except Mcq.DoesNotExist:
                         return Response({"Message": "Question not found"}, status=status.HTTP_404_NOT_FOUND)
                 else:
@@ -188,8 +198,7 @@ class GetCurrentQuestion(APIView):
             except Exception as e:
                 return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return redirect('result-view')
-
+            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
 
 class LogoutView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -214,6 +223,7 @@ class SubmitView(APIView):
             try:
 
                 user = request.user
+                token_obj, _ = Token.objects.get_or_create(user=user)
                 mcq = Mcq.objects.get(question_id=user.current_question)
                 data = request.data
                 selected = data.get("selected")
@@ -250,7 +260,8 @@ class SubmitView(APIView):
                     "question_id": mcq.question_id,
                     "selected_option": str(selected),
                     "status": status_of,
-                    "current_grading": current_score
+                    "current_grading": current_score,
+                    "token": str(token_obj),
                 }
 
                 ser = SubmissionSerializer(data=payload_to_serializer)
@@ -259,17 +270,18 @@ class SubmitView(APIView):
                     new_question_data = self.get_new_question_data(user, selected)
                     # ***** After clicking on submit button the submission will be saved and the new questions data will be sent as a response *****
                     if new_question_data is not None:
-                        return Response(new_question_data,status=status.HTTP_200_OK)
+                        response = Response(new_question_data, status=status.HTTP_200_OK)
+                        response['Authorization'] = 'token ' + str(token_obj)
+                        return response
                     else:
-                        return redirect('result-view')
+                        return Response({"message": "question over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
                 else:
                     return Response({"ERROR": "There was a problem, the serializer is not valid."})
             except Exception as e:
                 print(f"Error during submission: {str(e)}")
                 return Response({"ERROR": "There was a problem."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return redirect('result-view')
-
+            return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
     def get_new_question_data(self, user, selected):
         try:
@@ -314,6 +326,7 @@ class ResultPageView(APIView):
     def get(self, request):
         try:
             user = request.user
+            token_obj, _ = Token.objects.get_or_create(user=user)
             if user.total_questions != 0:
                 accuracy = (user.correct_questions / user.total_questions) * 100
             else:
@@ -336,7 +349,9 @@ class ResultPageView(APIView):
                 "user_accuracy": accuracy,
             }
 
-            return Response(result_page_data, status=status.HTTP_200_OK)
+            response = Response(result_page_data, status=status.HTTP_200_OK)
+            response['Authorization'] = 'token ' + str(token_obj)
+            return response
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -368,7 +383,7 @@ class EncodedDataView(APIView):
         
         if not if_end_time_exceeded(request):
             user = request.user
-        
+            token_obj, _ = Token.objects.get_or_create(user=user)
             streak_lifeline = StreakLifeline.objects.filter(user=user).first()
             mcq = Mcq.objects.get(question_id = user.current_question)
             
@@ -400,7 +415,7 @@ class EncodedDataView(APIView):
                 else:
                     return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
         else:
-            return redirect('result-view')
+            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
 
 class RequestAudiencePollLifeline(APIView):
     authentication_classes = [TokenAuthentication]
@@ -410,6 +425,7 @@ class RequestAudiencePollLifeline(APIView):
         if not if_end_time_exceeded(request):
             try:
                 user = request.user
+                token_obj, _ = Token.objects.get_or_create(user=user)
                 current_question_id = user.current_question
                 mcq = Mcq.objects.get(question_id = current_question_id)
                 audiancepoll = AudiancePoll.objects.filter(user = user).first()
@@ -433,7 +449,7 @@ class RequestAudiencePollLifeline(APIView):
                 return Response({"message": "Internal server error.", "error": str(e)},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return redirect('result-view')
+            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
 
     def calculate_correct_answer_percentage(self, current_question_id):
         try:
@@ -488,6 +504,7 @@ class ChatView(APIView):
     def post(self, request, *args, **kwargs):
         if not if_end_time_exceeded(request):
             user= request.user
+            token_obj, _ = Token.objects.get_or_create(user=user)
             mcq1 = Mcq.objects.filter(question_id=user.current_question).first()
             user_message = request.data.get('message')
             
@@ -512,7 +529,7 @@ class ChatView(APIView):
                 serializer.save()
                 return Response(serializer.data)
         else:
-            return redirect('result-view')
+            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
 
     def getgemini(self, messg):
         global pointer
@@ -584,7 +601,7 @@ class AllLifelines(APIView):
     
     def get(self, request, *args, **kwargs):
         user = request.user
-        
+        token_obj, _ = Token.objects.get_or_create(user=user)
         streak = StreakLifeline.objects.filter(user=user).first()
         audiance = AudiancePoll.objects.filter(user=user).first()
         gpt = Message.objects.filter(user_id=user).first()
@@ -594,7 +611,8 @@ class AllLifelines(APIView):
             "streak": True,
             "audiance": True,
             "skip": True,
-            "gpt": True
+            "gpt": True,
+            "token": str(token_obj),
         }
         
         if audiance:
@@ -611,8 +629,3 @@ class AllLifelines(APIView):
         
         
         return Response(payload, status=status.HTTP_200_OK)
-        
-        
-        
-        
-        

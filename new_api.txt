@@ -1,0 +1,46 @@
+username
+password
+event = clash
+is_team (bool)
+
+
+response for individual
+{
+    "user": {
+        "username": "prasad",
+        "first_name": "Animesh",
+        "last_name": "Jain",
+        "email": "prasadkhatake@gmail.com",
+        "phone": "7385170022",
+        "referralCode": null,
+        "senior": true,
+        "institute": "bn"
+    },
+    "detail": "verified"
+}
+
+{
+    "users": [
+        {
+            "username": "Animesh",
+            "first_name": "A",
+            "last_name": "J",
+            "email": "shadowlordaj7@gmail.com",
+            "phone": "1234567890",
+            "referralCode": null,
+            "senior": true,
+            "institute": "pict"
+        },
+        {
+            "username": "prasad",
+            "first_name": "Animesh",
+            "last_name": "Jain",
+            "email": "prasadkhatake@gmail.com",
+            "phone": "7385170022",
+            "referralCode": null,
+            "senior": true,
+            "institute": "bn"
+        }
+    ],
+    "detail": "verified"
+}-

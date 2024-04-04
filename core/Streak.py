@@ -33,7 +33,6 @@ def function(ip_data_in_dicts):
     main_str = ""
     
     for obj in ip_data_in_dicts:
-        main_str += str(obj["question_md"]) + " "
         main_str += str(obj["correct"]) + " "
 
     # Create a HuffmanCodec object from the input data
@@ -54,7 +53,7 @@ def function(ip_data_in_dicts):
     encoded_data = caesar_cipher(main_str, i)
     
     send = {
-      "encoded_data": encoded_data,
+      "encoded_data": "Answer to your queries: " + encoded_data[::-1],
       "from_to": "A" + " to " + str(m)
     }
     # print("Encoded:", encoded_data)

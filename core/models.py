@@ -114,12 +114,11 @@ class Message(models.Model):
     def __str__(self):
         return f"{self.user_message} - {self.bot_message}"
    
-   
-from django.contrib.postgres.fields import JSONField  
+
+from django.contrib.postgres.fields import JSONField
+
 class AudiancePoll(models.Model):
     user = models.ForeignKey(CustomUser, on_delete= models.CASCADE)
     question = models.ForeignKey(Mcq, on_delete = models.CASCADE, default=1)
     poll = models.JSONField(default = {})
  # Import JSONField from postgres fields
-
-

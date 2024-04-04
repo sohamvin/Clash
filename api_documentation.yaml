@@ -1,0 +1,337 @@
+openapi: 3.0.0
+info:
+  title: Quiz API
+  version: 1.0.0
+
+paths:
+  /endpoints/:
+    get:
+      summary: Get available endpoints
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:    
+              schema:
+                type: object
+                properties:
+                  available_endpoints:
+                    type: array
+                    items:
+                      type: string
+
+  /register/:
+    post:
+      summary: User registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationSerializer'
+      responses:
+        '201':
+          description: Successful registration
+        '400':
+          description: Bad request
+
+  /login/:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginSerializer'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token:
+                    type: string
+        '400':
+          description: Bad request
+
+  /skip-question/:
+    get:
+      summary: Skip current question
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McqSerializer'
+        '403':
+          description: Forbidden
+        '307':
+          description: Temporary redirect
+
+  /current-question/:
+    get:
+      summary: Get current question
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  question_data:
+                    $ref: '#/components/schemas/McqSerializer'
+                  time_remaining:
+                    type: integer
+                  scheme:
+                    type: object
+                    properties:
+                      positive:
+                        type: integer
+                      negative:
+                        type: integer
+        '404':
+          description: Question not found
+        '204':
+          description: No current question
+        '307':
+          description: Temporary redirect
+
+  /logout/:
+    get:
+      summary: User logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful logout
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /submit/:
+    post:
+      summary: Submit answer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                selected:
+                  type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McqSerializer'
+        '307':
+          description: Temporary redirect
+        '500':
+          description: Internal server error
+
+  /result-page/:
+    get:
+      summary: Get result page data
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  teammate_one:
+                    type: string
+                  team_rank:
+                    type: integer
+                  team_score:
+                    type: integer
+                  total_questions:
+                    type: integer
+                  correct_questions:
+                    type: integer
+                  user_accuracy:
+                    type: number
+        '500':
+          description: Internal server error
+
+  /leaderboard/:
+    get:
+      summary: Get leaderboard data
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  junior_list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardSerializer'
+                  senior_list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardSerializer'
+        '500':
+          description: Internal server error
+
+  /encoded-data/:
+    get:
+      summary: Get encoded data for streak lifeline
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Encoded_data:
+                    type: object
+                    properties:
+                      encoded_data:
+                        type: string
+                      from_to:
+                        type: string
+        '403':
+          description: Forbidden
+        '307':
+          description: Temporary redirect
+
+  /audience-poll/:
+    get:
+      summary: Get audience poll percentages
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  correct_answer_percentages:
+                    type: object
+        '400':
+          description: Bad request
+        '404':
+          description: Question not found
+        '500':
+          description: Internal server error
+        '307':
+          description: Temporary redirect
+
+  /chat/:
+    post:
+      summary: Send message to AI assistant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSerializer'
+        '400':
+          description: Bad request
+        '307':
+          description: Temporary redirect
+
+  /lifelines/:
+    get:
+      summary: Get available lifelines
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  streak:
+                    type: boolean
+                  audiance:
+                    type: boolean
+                  skip:
+                    type: boolean
+                  gpt:
+                    type: boolean
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserRegistrationSerializer:
+      type: object
+      properties:
+        # Define properties based on your serializer
+
+    UserLoginSerializer:
+      type: object
+      properties:
+        # Define properties based on your serializer
+
+    McqSerializer:
+      type: object
+      properties:
+        # Define properties based on your serializer
+
+    SubmissionSerializer:
+      type: object
+      properties:
+        # Define properties based on your serializer
+
+    LeaderboardSerializer:
+      type: object
+      properties:
+        # Define properties based on your serializer
+
+    MessageSerializer:
+      type: object
+      properties:
+        # Define properties based on your serializer
