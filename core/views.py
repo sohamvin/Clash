@@ -188,7 +188,7 @@ class GetCurrentQuestion(APIView):
                         ser = McqSerializer(mcq)
                         remaining_time = user.end_time - timezone.now()  # Calculate remaining time (using end_time
                         # print(remaining_time.seconds)
-                        response = Response({"question_data": ser.data, "username": user.username, "streak": user.question_streak, "time_remaining": remaining_time.seconds, "scheme": {"positive": user.positive, "negative": user.negative}, "token": str(token_obj)}, status=status.HTTP_200_OK)
+                        response = Response({"question_data": ser.data, "score": user.team_score, "username": user.username, "streak": user.question_streak, "time_remaining": remaining_time.seconds, "scheme": {"positive": user.positive, "negative": user.negative}, "token": str(token_obj)}, status=status.HTTP_200_OK)
                         response['Authorization'] = 'token ' + str(token_obj)
                         return response
                     except Mcq.DoesNotExist:
