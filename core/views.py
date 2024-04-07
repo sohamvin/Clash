@@ -18,10 +18,10 @@ from django.contrib.auth import get_user_model
 import random
 from django.utils import timezone
 from .Streak import function
-from rest_framework import generics
-import os   
+# from rest_framework import generics
+# import os
 # from dotenv import load_dotenv
-import requests
+# import requests
 # load_dotenv()
 import google.generativeai as genai
 
@@ -188,7 +188,7 @@ class GetCurrentQuestion(APIView):
                         ser = McqSerializer(mcq)
                         remaining_time = user.end_time - timezone.now()  # Calculate remaining time (using end_time
                         # print(remaining_time.seconds)
-                        response = Response({"question_data": ser.data, "time_remaining": remaining_time.seconds, "scheme": {"positive": user.positive, "negative": user.negative}, "token": str(token_obj)}, status=status.HTTP_200_OK)
+                        response = Response({"question_data": ser.data, "username": user.username, "streak": user.question_streak, "time_remaining": remaining_time.seconds, "scheme": {"positive": user.positive, "negative": user.negative}, "token": str(token_obj)}, status=status.HTTP_200_OK)
                         response['Authorization'] = 'token ' + str(token_obj)
                         return response
                     except Mcq.DoesNotExist:
@@ -232,8 +232,6 @@ class SubmitView(APIView):
                 current_score = 0
         
                 if str(mcq.correct) == selected:
-                    if user.previous_question:
-                        user.question_streak += 1
                     user.team_score += user.positive
                     current_score += user.positive
                     user.previous_question = True
