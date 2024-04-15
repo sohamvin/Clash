@@ -101,7 +101,7 @@ class SkipMcqView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3:
             user = request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             
@@ -160,7 +160,15 @@ class SkipMcqView(APIView):
             else:
                 return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
         else:
+            
             response = Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            
+            if if_end_time_exceeded(request):
+                response= Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                response= Response({"message": "exceeded tab switch"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            
+
             response['Authorization'] = 'token ' + str(token_obj)
             return response
 
@@ -170,7 +178,7 @@ class GetCurrentQuestion(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        if not if_end_time_exceeded(request) or request.user.is_first_visit:
+        if (not if_end_time_exceeded(request) or request.user.is_first_visit) and request.user.tab_switch <= 3:
             user = request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             try:
@@ -198,7 +206,10 @@ class GetCurrentQuestion(APIView):
             except Exception as e:
                 return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "exceeded tab switch"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
 class LogoutView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -219,7 +230,7 @@ class SubmitView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3:
             try:
 
                 user = request.user
@@ -279,7 +290,15 @@ class SubmitView(APIView):
                 print(f"Error during submission: {str(e)}")
                 return Response({"ERROR": "There was a problem."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "exceeded tab switch"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+                
+                
+            
+
 
     def get_new_question_data(self, user, selected):
         try:
@@ -379,7 +398,7 @@ class EncodedDataView(APIView):
 
     def get(self, request):     
         
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3:
             user = request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             streak_lifeline = StreakLifeline.objects.filter(user=user).first()
@@ -413,14 +432,17 @@ class EncodedDataView(APIView):
                 else:
                     return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
         else:
-            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "exceeded tab switch"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
 class RequestAudiencePollLifeline(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3:
             try:
                 user = request.user
                 token_obj, _ = Token.objects.get_or_create(user=user)
@@ -447,7 +469,10 @@ class RequestAudiencePollLifeline(APIView):
                 return Response({"message": "Internal server error.", "error": str(e)},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "exceeded tab switch"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
     def calculate_correct_answer_percentage(self, current_question_id):
         try:
@@ -500,7 +525,7 @@ class ChatView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3:
             user= request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             mcq1 = Mcq.objects.filter(question_id=user.current_question).first()
@@ -527,7 +552,10 @@ class ChatView(APIView):
                 serializer.save()
                 return Response(serializer.data)
         else:
-            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "exceeded tab switch"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
     def getgemini(self, messg):
         global pointer
@@ -592,7 +620,6 @@ class ChatView(APIView):
     #     return formatted_messages
     
 
-
 class AllLifelines(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -601,29 +628,43 @@ class AllLifelines(APIView):
         user = request.user
         token_obj, _ = Token.objects.get_or_create(user=user)
         streak = StreakLifeline.objects.filter(user=user).first()
-        audiance = AudiancePoll.objects.filter(user=user).first()
+        audience = AudiancePoll.objects.filter(user=user).first()
         gpt = Message.objects.filter(user_id=user).first()
         skip = SkipQuestionLifeline.objects.filter(user=user).first()
         
         payload = {
-            "streak": True,
-            "audiance": True,
-            "skip": True,
-            "gpt": True,
+            "used": {
+                "streak": streak is not None,
+                "audience": audience is not None,
+                "skip": skip is not None,
+                "gpt": gpt is not None,
+            },
+            "in_use": {
+                "streak": streak and streak.question.question_id == user.current_question,
+                "audience": audience and audience.question.question_id == user.current_question,
+                "gpt": gpt and gpt.question.question_id == user.current_question,
+            },
             "token": str(token_obj),
         }
         
-        if audiance:
-            payload["audiance"] = False
         if skip:
-            payload["skip"]= False
-        if gpt:
-            payload["gpt"] = False
-        
-        if streak or (not streak and int(user.question_streak) != 1):
-            # print((not streak and int(user.question_streak) != 1))
-            # print(streak)
-            payload["streak"] = False
-        
+            payload["used"]["skip"] = False
         
         return Response(payload, status=status.HTTP_200_OK)
+    
+
+class TabSwitch(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if not if_end_time_exceeded(request) and user.tab_switch <= 3:
+            user.tab_switch += 1
+            user.save()
+            return Response({"message": "Tab was switched!!!"}, status=status.HTTP_200_OK)
+        else:
+            if if_end_time_exceeded(request):
+                return Response({"message": "Time over"}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({"message": "Exceeded tab switch limit"}, status=status.HTTP_400_BAD_REQUEST)

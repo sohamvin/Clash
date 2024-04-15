@@ -67,6 +67,7 @@ class CustomUser(AbstractUser):
     positive = models.IntegerField(default = 4)
     negative = models.IntegerField(default = -2)
     objects = CustomUserManager()
+    tab_switch = models.IntegerField(default=0)
 
 
     USERNAME_FIELD = 'username'
