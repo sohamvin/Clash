@@ -685,13 +685,19 @@ class AllLifelines(APIView):
                     b3 = False
             else:
                 b3 = False
+                
+            b4 = False
+            
+            if not streak:
+                if user.question_streak >=1 :
+                    b4 = True
             
             payload = {
-                "used": {
-                    "streak": streak is not None,
-                    "audience": audience is not None,
-                    "skip": skip is not None,
-                    "gpt": gpt is not None,
+                "available": {
+                    "streak": b4,
+                    "audience": audience is None,
+                    "skip": skip is None,
+                    "gpt": gpt is None,
                 },
                 "in_use": {
                     "streak": b3,
