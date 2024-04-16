@@ -18,6 +18,7 @@ from django.contrib.auth import get_user_model
 import random
 from django.utils import timezone
 from .Streak import function
+from rest_framework import permissions
 # from rest_framework import generics
 # import os
 # from dotenv import load_dotenv
@@ -52,18 +53,21 @@ def if_end_time_exceeded(request):
 
 
 # TODO @permission_classes([IsAuthenticated])
-@api_view(['GET'])
-def endpoints(request):
-    available_endpoints = [
-        '/endpoints/',
-        '/token/refresh/',
-        '/list-endpoints/',
-    ]
-    return JsonResponse({'available_endpoints': available_endpoints})
+# @api_view(['GET'])
+# def endpoints(request):
+#     available_endpoints = [
+#         '/endpoints/',
+#         '/token/refresh/',
+#         '/list-endpoints/',
+#     ]
+#     return JsonResponse({'available_endpoints': available_endpoints})
 
 
 class UserRegistrationView(APIView):
+    # authentication_classes = [TokenAuthentication]
+    # permission_classes = [permissions.IsAdminUser]
     def post(self, request):
+        
         ser = UserRegistrationSerializer(data=request.data)
 
         if ser.is_valid():
@@ -80,6 +84,9 @@ class UserLoginView(APIView):
                 username = ser.validated_data['username']
                 password = ser.validated_data['password']
                 user = authenticate(username=username, password=password, request=request)
+                
+                if user.tab_switch > 3 or user.submitted:
+                    return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
                 expiration_time = datetime.now() + timedelta(seconds=20)
 
@@ -87,7 +94,7 @@ class UserLoginView(APIView):
                 token_obj.expires_at = expiration_time
                 token_obj.save()
 
-                response = Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
+                response = Response({'message': 'Login successful', "token": "token " + str(token_obj)}, status=status.HTTP_200_OK)
                 response['Authorization'] = 'token ' + str(token_obj)
                 return response
             else:
@@ -101,7 +108,7 @@ class SkipMcqView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3 and not request.user.submitted:
             user = request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             
@@ -159,18 +166,18 @@ class SkipMcqView(APIView):
             else:
                 return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
         else:
-            response = Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
-            response['Authorization'] = 'token ' + str(token_obj)
-            return response
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
-remaining_time = 0 
 
 class GetCurrentQuestion(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        if not if_end_time_exceeded(request) or request.user.is_first_visit:
+        if (not if_end_time_exceeded(request) or request.user.is_first_visit) and request.user.tab_switch <= 3 and not request.user.submitted:
             user = request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             try:
@@ -198,7 +205,10 @@ class GetCurrentQuestion(APIView):
             except Exception as e:
                 return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
 class LogoutView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -219,7 +229,7 @@ class SubmitView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3 and not request.user.submitted:
             try:
 
                 user = request.user
@@ -272,6 +282,8 @@ class SubmitView(APIView):
                         response['Authorization'] = 'token ' + str(token_obj)
                         return response
                     else:
+                        user.submitted = True
+                        user.save()
                         return Response({"message": "question over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
                 else:
                     return Response({"ERROR": "There was a problem, the serializer is not valid."})
@@ -279,7 +291,15 @@ class SubmitView(APIView):
                 print(f"Error during submission: {str(e)}")
                 return Response({"ERROR": "There was a problem."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+                
+                
+            
+
 
     def get_new_question_data(self, user, selected):
         try:
@@ -379,7 +399,7 @@ class EncodedDataView(APIView):
 
     def get(self, request):     
         
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3 and not request.user.submitted:
             user = request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             streak_lifeline = StreakLifeline.objects.filter(user=user).first()
@@ -413,14 +433,17 @@ class EncodedDataView(APIView):
                 else:
                     return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
         else:
-            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
 class RequestAudiencePollLifeline(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not if_end_time_exceeded(request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3 and not request.user.submitted:
             try:
                 user = request.user
                 token_obj, _ = Token.objects.get_or_create(user=user)
@@ -447,7 +470,10 @@ class RequestAudiencePollLifeline(APIView):
                 return Response({"message": "Internal server error.", "error": str(e)},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
     def calculate_correct_answer_percentage(self, current_question_id):
         try:
@@ -499,8 +525,8 @@ class ChatView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, *args, **kwargs):
-        if not if_end_time_exceeded(request):
+    def post(self, request, *args, **kwargs):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <= 3 and not request.user.submitted:
             user= request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             mcq1 = Mcq.objects.filter(question_id=user.current_question).first()
@@ -527,13 +553,37 @@ class ChatView(APIView):
                 serializer.save()
                 return Response(serializer.data)
         else:
-            return Response(status=status.HTTP_307_TEMPORARY_REDIRECT)
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+    def get(self, request):
+        if not if_end_time_exceeded(request) and request.user.tab_switch <=3 and not request.user.submitted:
+            user = request.user
+            mcq1 = Mcq.objects.filter(question_id=user.current_question).first()
+            gpt = Message.objects.filter(user_id = user.team_id).first()
+            
+            if gpt:
+                if gpt.question == mcq1:
+                    ser = MessageSerializer(gpt, many=False)
+                    return Response(ser.data, status=status.HTTP_200_OK)
+                else:
+                    return Response({"message": "Cannot access"}, status=status.HTTP_400_BAD_REQUEST) 
+            else:
+                return Response({"message": "use the lifeline first"}, status=status.HTTP_400_BAD_REQUEST)           
+        else:
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)      
+        
 
     def getgemini(self, messg):
         global pointer
-        genai.configure(api_key=arr[pointer])
+        # genai.configure(api_key=arr[pointer])
+        genai.configure(api_key= "AIzaSyBWFXFRlzVnNQAtM9DZ5cFdfKPWSwi4GUI")
 
-        pointer = (pointer+1)%2
+        pointer = (pointer+1)%len(arr)
 
         model = genai.GenerativeModel('gemini-pro')
 
@@ -592,38 +642,96 @@ class ChatView(APIView):
     #     return formatted_messages
     
 
-
 class AllLifelines(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
     
     def get(self, request, *args, **kwargs):
+        
+        if not if_end_time_exceeded(request) and request.user.tab_switch <=3 and not request.user.submitted:
+            user = request.user
+            streak = StreakLifeline.objects.filter(user=user).first()
+            audience = AudiancePoll.objects.filter(user=user).first()
+            gpt = Message.objects.filter(user_id=user).first()
+            skip = SkipQuestionLifeline.objects.filter(user=user).first()
+            
+            # print(gpt and gpt.question.question_id == user.current_question)
+            # print(gpt.question.question_id == user.current_question)
+            
+            b1 = False
+            b2 = False
+            b3 = False
+            if gpt:
+                if gpt.question.question_id == user.current_question:
+                    b1 = True
+                else:
+                    b1 = False
+            else:
+                b1 = False
+            
+            if audience:
+                if audience.question.question_id == user.current_question:
+                    b2 = True
+                else:
+                    b2 = False
+            else:
+                b2 = False
+
+            if streak:
+                if streak.question.question_id == user.current_question:
+                    b3 = True
+                else:
+                    b3 = False
+            else:
+                b3 = False
+                
+            b4 = False
+            
+            if not streak:
+                if user.question_streak >=1 :
+                    b4 = True
+            
+            payload = {
+                "available": {
+                    "streak": b4,
+                    "audience": audience is None,
+                    "skip": skip is None,
+                    "gpt": gpt is None,
+                },
+                "in_use": {
+                    "streak": b3,
+                    "audience": b2,
+                    "gpt": b1,
+                }
+            }
+            
+            return Response(payload, status=status.HTTP_200_OK)
+        else:
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)            
+            
+    
+
+class TabSwitch(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
         user = request.user
-        token_obj, _ = Token.objects.get_or_create(user=user)
-        streak = StreakLifeline.objects.filter(user=user).first()
-        audiance = AudiancePoll.objects.filter(user=user).first()
-        gpt = Message.objects.filter(user_id=user).first()
-        skip = SkipQuestionLifeline.objects.filter(user=user).first()
-        
-        payload = {
-            "streak": True,
-            "audiance": True,
-            "skip": True,
-            "gpt": True,
-            "token": str(token_obj),
-        }
-        
-        if audiance:
-            payload["audiance"] = False
-        if skip:
-            payload["skip"]= False
-        if gpt:
-            payload["gpt"] = False
-        
-        if streak or (not streak and int(user.question_streak) != 1):
-            # print((not streak and int(user.question_streak) != 1))
-            # print(streak)
-            payload["streak"] = False
-        
-        
-        return Response(payload, status=status.HTTP_200_OK)
+        if not if_end_time_exceeded(request) and user.tab_switch <= 3 and not user.submitted:
+            if request.data["bool"] == True:
+                    user.tab_switch += 1
+                    user.save()
+                    if user.tab_switch > 3:
+                        user.submitted = True
+                        user.save()
+                    return Response({"message": "Tab was switched!!!", "count": user.tab_switch}, status=status.HTTP_200_OK)                   
+            else:
+                return Response({"message": "Tab not switched", "count": user.tab_switch}, status=status.HTTP_200_OK)
+        else:
+            if if_end_time_exceeded(request):
+                return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+            else:
+                return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)

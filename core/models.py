@@ -13,7 +13,7 @@ from django.contrib.auth import get_user_model
 
 class Mcq(models.Model):
     question_id = models.IntegerField(primary_key = True)
-    question_md = models.CharField(max_length=255, blank=False, default="Enter a Valid markdown")
+    question_md = models.TextField( blank=True, default="Enter a Valid markdown")
     a = models.CharField(max_length=255, blank=False)
     b = models.CharField(max_length=255, blank=False)
     c = models.CharField(max_length=255, blank=False)
@@ -67,6 +67,8 @@ class CustomUser(AbstractUser):
     positive = models.IntegerField(default = 4)
     negative = models.IntegerField(default = -2)
     objects = CustomUserManager()
+    tab_switch = models.IntegerField(default=0)
+    submitted = models.BooleanField(default=False)
 
 
     USERNAME_FIELD = 'username'
@@ -95,17 +97,17 @@ class Submission(models.Model):
 
 
 class StreakLifeline(models.Model):
-    question = models.ForeignKey(Mcq, on_delete = models.CASCADE, default = 1)
+    question = models.ForeignKey(Mcq, on_delete = models.CASCADE)
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     message = models.TextField(default = "NULL")
     conversion = models.CharField(default = "", max_length=300)
 
 class SkipQuestionLifeline(models.Model):
-    question = models.ForeignKey(Mcq, on_delete = models.CASCADE, default =1)
+    question = models.ForeignKey(Mcq, on_delete = models.CASCADE)
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
 
 class Message(models.Model):
-    question = models.ForeignKey(Mcq, on_delete = models.CASCADE, default=1)
+    question = models.ForeignKey(Mcq, on_delete = models.CASCADE)
     user_id=models.ForeignKey(CustomUser,default=1, on_delete=models.CASCADE)
     user_message = models.TextField()
     bot_message = models.TextField()
