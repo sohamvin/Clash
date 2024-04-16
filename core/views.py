@@ -81,7 +81,8 @@ class UserLoginView(APIView):
                 password = ser.validated_data['password']
                 user = authenticate(username=username, password=password, request=request)
                 
-                
+                if user.tab_switch > 3 or user.submitted:
+                    return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
                 expiration_time = datetime.now() + timedelta(seconds=20)
 
@@ -278,6 +279,8 @@ class SubmitView(APIView):
                         response['Authorization'] = 'token ' + str(token_obj)
                         return response
                     else:
+                        user.submitted = True
+                        user.save()
                         return Response({"message": "question over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
                 else:
                     return Response({"ERROR": "There was a problem, the serializer is not valid."})
@@ -715,6 +718,9 @@ class TabSwitch(APIView):
             if request.data["bool"] == True:
                     user.tab_switch += 1
                     user.save()
+                    if user.tab_switch > 3:
+                        user.submitted = True
+                        user.save()
                     return Response({"message": "Tab was switched!!!", "count": user.tab_switch}, status=status.HTTP_200_OK)                   
             else:
                 return Response({"message": "Tab not switched", "count": user.tab_switch}, status=status.HTTP_200_OK)
