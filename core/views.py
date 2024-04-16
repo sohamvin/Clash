@@ -18,6 +18,7 @@ from django.contrib.auth import get_user_model
 import random
 from django.utils import timezone
 from .Streak import function
+from rest_framework import permissions
 # from rest_framework import generics
 # import os
 # from dotenv import load_dotenv
@@ -52,18 +53,21 @@ def if_end_time_exceeded(request):
 
 
 # TODO @permission_classes([IsAuthenticated])
-@api_view(['GET'])
-def endpoints(request):
-    available_endpoints = [
-        '/endpoints/',
-        '/token/refresh/',
-        '/list-endpoints/',
-    ]
-    return JsonResponse({'available_endpoints': available_endpoints})
+# @api_view(['GET'])
+# def endpoints(request):
+#     available_endpoints = [
+#         '/endpoints/',
+#         '/token/refresh/',
+#         '/list-endpoints/',
+#     ]
+#     return JsonResponse({'available_endpoints': available_endpoints})
 
 
 class UserRegistrationView(APIView):
+    # authentication_classes = [TokenAuthentication]
+    # permission_classes = [permissions.IsAdminUser]
     def post(self, request):
+        
         ser = UserRegistrationSerializer(data=request.data)
 
         if ser.is_valid():
@@ -695,9 +699,6 @@ class AllLifelines(APIView):
                     "gpt": b1,
                 }
             }
-            
-            if skip:
-                payload["used"]["skip"] = False
             
             return Response(payload, status=status.HTTP_200_OK)
         else:

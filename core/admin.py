@@ -1,5 +1,8 @@
 from django.contrib import admin
 from .models import Mcq,Submission, CustomUser, StreakLifeline, SkipQuestionLifeline, Message, AudiancePoll
+from import_export.admin import ImportExportModelAdmin
+# LATEST COMMIT ON Dev_sujal
+from import_export import resources,fields
 
 # LATEST COMMIT ON Dev_sujal
 
@@ -8,15 +11,23 @@ from .models import Mcq,Submission, CustomUser, StreakLifeline, SkipQuestionLife
 class ModelStreakLifeline(admin.ModelAdmin):
     list_display = ['user']
 
+class McqResource(resources.ModelResource):
+    id = fields.Field(attribute='id')
+    class Meta:
+        model = Mcq
+        exclude = ('id',)
+
+@admin.register(Mcq)
+class ModelMcq(ImportExportModelAdmin):
+    resource_class = McqResource
+    search_fields = ['author', 'senior', 'total_responses', 'correct_responses']
+    list_display = [ 'correct', 'correct_responses', 'total_responses', 'senior', 'author']
+    ordering = ['senior','total_responses']
+
 @admin.register(AudiancePoll)
 class  ModelAudiencePoll(admin.ModelAdmin):
     list_display = ['user', 'question']
 
-@admin.register(Mcq)
-class ModelMcq(admin.ModelAdmin):
-    search_fields = ['author', 'senior', 'total_responses', 'correct_responses']
-    list_display = ['question_id', 'correct', 'correct_responses', 'total_responses', 'senior', 'author']
-    ordering = ['senior','total_responses']
 # admin.site.register(Submission)
 # admin.site.register(CustomToken)
 @admin.register(Submission)
@@ -24,8 +35,11 @@ class ModelSubmission(admin.ModelAdmin):
     search_fields = ['question_id', 'submitted_at', 'current_grading']
     list_display = ['submission_id', 'user_id', 'selected_option', 'question_id', 'current_grading','submitted_at']
     ordering = ['current_grading']
+
+
+
 @admin.register(CustomUser)
-class ModelCustomUser(admin.ModelAdmin):
+class ModelCustomUser(ImportExportModelAdmin):
     search_fields = ['team_id', 'email', 'current_question', 'team_score']
     list_display = ['team_id', 'email', 'username', 'teammate_one', 'current_question', 'question_streak', 'team_score', 'senior_team', 'end_time']
     ordering = ['team_score']
