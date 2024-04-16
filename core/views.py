@@ -29,7 +29,7 @@ pointer = 0
 
 # arr= [str(os.getenv("GEMINI_KEY1")), str(os.getenv("GEMINI_KEY"))]
 
-arr = ["AIzaSyCi7p8oBpIwtIcaOVFp2Lf925-ZxBUqcmo","AIzaSyDUK7hhkajiWBSNXeAv7E7sduozkXFwdwo"]
+arr = ["AIzaSyB-76akHNTENYJ_ZH9X2-XFdP2ZNxWT3SM"]
 
 
 User = get_user_model()
@@ -137,7 +137,7 @@ class SkipMcqView(APIView):
                         return Response({"Message": "Last question"}, status=status.HTTP_204_NO_CONTENT)
 
                         # Select a random question ID from the remaining questions
-                    qid = random.choice(questions_list)
+                    qid = questions_list[0]
                     questions_list.remove(qid)
                         
                         # Update the user's remaining questions list
@@ -152,8 +152,7 @@ class SkipMcqView(APIView):
                     ser = McqSerializer(mcq1)
                     skip_object = SkipQuestionLifeline.objects.create(user=user, question = mcq1)
                     skip_object.save()
-                    response = Response(ser.data, status=status.HTTP_200_OK)
-                    response['Authorization'] = 'token ' + str(token_obj)
+                    response = Response({"question_data": ser.data, "score": user.team_score, "username": user.username, "streak": user.question_streak, "time_remaining": remaining_time.seconds, "scheme": {"positive": user.positive, "negative": user.negative}, "token": str(token_obj)}, status=status.HTTP_200_OK)
                     return response
                 except Exception as e:
                     return Response({"Error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -164,6 +163,7 @@ class SkipMcqView(APIView):
             response['Authorization'] = 'token ' + str(token_obj)
             return response
 
+remaining_time = 0 
 
 class GetCurrentQuestion(APIView):
     authentication_classes = [TokenAuthentication]
@@ -499,12 +499,12 @@ class ChatView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         if not if_end_time_exceeded(request):
             user= request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             mcq1 = Mcq.objects.filter(question_id=user.current_question).first()
-            user_message = request.data.get('message')
+            user_message = mcq1.question_md
             
             gpt = Message.objects.filter(user_id = user.team_id).first()
             
