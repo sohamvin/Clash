@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'corsheaders',
 ]
 
+IMPORT_EXPORT_USE_TRANSACTIONS = True
+
 AUTH_USER_MODEL = 'core.CustomUser'
 
 MIDDLEWARE = [

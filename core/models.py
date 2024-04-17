@@ -47,11 +47,10 @@ class CustomUserManager(BaseUserManager):
 
 
 class CustomUser(AbstractUser):
-    team_id = models.CharField(max_length=256, primary_key=True)
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=256, unique=True) # overrided , but must be team name , not username of user
-    teammate_one = models.CharField(max_length=300, unique = True)
-    teammate_two = models.CharField(max_length=300, blank=True)
+    teammate_one = models.CharField(max_length=300)
+    teammate_two = models.CharField(max_length=300)
     team_score = models.IntegerField(default=0)
     current_question = models.IntegerField(default=1, blank=False)
     previous_question = models.BooleanField(default=False, blank=False)
@@ -75,12 +74,12 @@ class CustomUser(AbstractUser):
 
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['email', 'teammate_one']
+    # REQUIRED_FIELDS = ['email', 'teammate_one'] # For command line superuser creation these are required
 
-    def save(self, *args, **kwargs):
-        if not self.team_id:
-            self.team_id = str(uuid.uuid4())
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+        # if not self.team_id:
+            # self.team_id = str(uuid.uuid4())
+        # super().save(*args, **kwargs)
     # groups = models.ManyToManyField(Group, related_name='custom_user_groups')
     # user_permissions = models.ManyToManyField(Permission, related_name='custom_user_permissions')
 

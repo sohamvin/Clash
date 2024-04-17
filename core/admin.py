@@ -18,10 +18,10 @@ class McqResource(resources.ModelResource):
         exclude = ('id',)
 
 @admin.register(Mcq)
-class ModelMcq(ImportExportModelAdmin):
+class ModelMcq(ImportExportModelAdmin, admin.ModelAdmin):
     resource_class = McqResource
-    search_fields = ['author', 'senior', 'total_responses', 'correct_responses']
-    list_display = [ 'correct', 'correct_responses', 'total_responses', 'senior', 'author']
+    search_fields = ['question_id', 'author', 'senior', 'total_responses', 'correct_responses']
+    list_display = ['question_id', 'correct', 'correct_responses', 'total_responses', 'senior', 'author']
     ordering = ['senior','total_responses']
 
 @admin.register(AudiancePoll)
@@ -37,12 +37,12 @@ class ModelSubmission(admin.ModelAdmin):
     ordering = ['current_grading']
 
 
-
 @admin.register(CustomUser)
 class ModelCustomUser(ImportExportModelAdmin):
-    search_fields = ['team_id', 'email', 'current_question', 'team_score']
-    list_display = ['team_id', 'email', 'username', 'teammate_one', 'current_question', 'question_streak', 'team_score', 'senior_team', 'end_time']
+    search_fields = ['current_question', 'team_score']
+    list_display = ['username', 'teammate_one', 'current_question', 'question_streak', 'team_score', 'senior_team', 'end_time']
     ordering = ['team_score']
+
 # admin.site.register(User)
 @admin.register(SkipQuestionLifeline)
 class ModelSkipQuestion(admin.ModelAdmin):
@@ -51,3 +51,4 @@ class ModelSkipQuestion(admin.ModelAdmin):
 @admin.register(Message)
 class Message(admin.ModelAdmin):
     list_display = ['user_id', 'user_message', 'bot_message']
+

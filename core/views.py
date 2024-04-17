@@ -67,6 +67,13 @@ class UserRegistrationView(APIView):
     # authentication_classes = [TokenAuthentication]
     # permission_classes = [permissions.IsAdminUser]
     def post(self, request):
+        # DO NOT TOUCH, this serializer has this field compulsion
+        if not request.data.get('teammate_two'):
+            request.data['teammate_two'] = ''
+        
+        if not request.data.get('email'):
+            request.data['email'] = ''
+
         ser = UserRegistrationSerializer(data=request.data)
 
         if ser.is_valid():
@@ -85,10 +92,12 @@ class UserLoginView(APIView):
                 password = ser.validated_data['password']
                 user = authenticate(username=username, password=password, request=request)
 
+                if user.submitted == True:
+                    return Response({"message": "Submitted"}, status=status.HTTP_208_ALREADY_REPORTED)
+                if user.tab_switch > 3:
+                    return Response({"message": "Tab switched more than 3 times"}, status=status.HTTP_208_ALREADY_REPORTED)
                 if user.logged_in == True:
-                    return Response({"message": "Already logged in."}, status=status.HTTP_400_BAD_REQUEST)
-                if user.tab_switch > 3 or user.submitted:
-                    return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
+                    return Response({"message": "Already logged in."}, status=status.HTTP_208_ALREADY_REPORTED)
 
                 expiration_time = datetime.now() + timedelta(seconds=20)
 
@@ -265,7 +274,7 @@ class SubmitView(APIView):
                 mcq.save()
 
                 payload_to_serializer = {
-                    "user_id": user.team_id,
+                    "user_id": user.id,
                     "question_id": mcq.question_id,
                     "selected_option": str(selected),
                     "status": status_of,
@@ -361,6 +370,7 @@ class ResultPageView(APIView):
             result_page_data = {
                 "username": user.username,
                 "teammate_one": user.teammate_one,
+                "teammate_two": user.teammate_two,
                 "team_rank": team_rank,
                 "max_streak": user.max_streak,
                 "team_score": user.team_score,
@@ -400,7 +410,7 @@ class EncodedDataView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):     
+    def get(self, request):
         
         if not end_time_exceeded(request) and request.user.tab_switch <= 3 and not request.user.submitted:
             user = request.user
@@ -530,12 +540,12 @@ class ChatView(APIView):
 
     def post(self, request, *args, **kwargs):
         if not end_time_exceeded(request) and request.user.tab_switch <= 3 and not request.user.submitted:
-            user= request.user
+            user = request.user
             token_obj, _ = Token.objects.get_or_create(user=user)
             mcq1 = Mcq.objects.filter(question_id=user.current_question).first()
-            user_message = request.message
+            user_message = request.data.get('message', '')
             
-            gpt = Message.objects.filter(user_id = user.team_id).first()
+            gpt = Message.objects.filter(user_id = user.id).first()
             
             if gpt:
                 if gpt.question == mcq1:
@@ -546,7 +556,7 @@ class ChatView(APIView):
             else:
                 bot_message = self.getgemini(user_message)
                 payload_to_serializer = {
-                        "user_id": user.team_id,
+                        "user_id": user.id,
                         'user_message': user_message,
                         'bot_message': bot_message,
                         'question': mcq1.question_id
@@ -565,7 +575,7 @@ class ChatView(APIView):
         if not end_time_exceeded(request) and request.user.tab_switch <=3 and not request.user.submitted:
             user = request.user
             mcq1 = Mcq.objects.filter(question_id=user.current_question).first()
-            gpt = Message.objects.filter(user_id = user.team_id).first()
+            gpt = Message.objects.filter(user_id = user.id).first()
             
             if gpt:
                 if gpt.question == mcq1:

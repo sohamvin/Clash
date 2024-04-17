@@ -48,15 +48,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'password', 'teammate_one', 'senior_team']
+        fields = ['username', 'password', 'teammate_one', 'teammate_two', 'senior_team']
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         instance = self.Meta.model(**validated_data)
-
         if password is not None:
             instance.set_password(password)
-
+    
             if instance.senior_team:
                 senior_objs = Mcq.objects.filter(senior=True)
                 seniorlist = [senior_obj.question_id for senior_obj in senior_objs]

@@ -26,7 +26,7 @@ def caesar_cipher(text, shift):
       result += chr(new_c) if char.islower() else chr(new_c + 32)
     else:
       result += char
-  return result
+  return result[::-1]
 
 
 def function(ip_data_in_dicts):
@@ -54,7 +54,7 @@ def function(ip_data_in_dicts):
     
     send = {
       "encoded_data": "Answer to your queries: " + encoded_data[::-1],
-      "from_to": "A" + " to " + str(m)
+      "from_to": str(m) + " to " + "A"
     }
     # print("Encoded:", encoded_data)
     return send
