@@ -21,10 +21,14 @@ class SpecialMcqSerializer(serializers.ModelSerializer):
 
 
 class LeaderboardSerializer(serializers.ModelSerializer):
+    team_score = serializers.SerializerMethodField()
     class Meta:
         model = CustomUser
         fields = ['username', 'team_score', 'total_questions', 'correct_questions']
-
+    
+    def get_team_score(self, obj):
+        return obj.max_streak + obj.team_score
+    
 
 class SubmissionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,7 +48,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['team_id', 'username', 'email', 'password', 'teammate_one', 'senior_team']
+        fields = ['username', 'password', 'teammate_one', 'senior_team']
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -79,6 +83,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     username = serializers.CharField()
+    is_team = serializers.BooleanField()
     
 
 

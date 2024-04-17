@@ -56,6 +56,8 @@ class CustomUser(AbstractUser):
     current_question = models.IntegerField(default=1, blank=False)
     previous_question = models.BooleanField(default=False, blank=False)
     question_streak = models.IntegerField(default=0)
+    max_streak = models.IntegerField(default=0)
+    question_level = models.IntegerField(default=0)
     senior_team = models.BooleanField(default=False)
     Questions_to_list = models.TextField(default="NOTHING")
     total_questions = models.IntegerField(default=0, blank=False)
@@ -69,6 +71,7 @@ class CustomUser(AbstractUser):
     objects = CustomUserManager()
     tab_switch = models.IntegerField(default=0)
     submitted = models.BooleanField(default=False)
+    logged_in = models.BooleanField(default=False)
 
 
     USERNAME_FIELD = 'username'
