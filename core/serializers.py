@@ -22,12 +22,19 @@ class SpecialMcqSerializer(serializers.ModelSerializer):
 
 class LeaderboardSerializer(serializers.ModelSerializer):
     team_score = serializers.SerializerMethodField()
+    team_rank = serializers.SerializerMethodField()
+    
     class Meta:
         model = CustomUser
-        fields = ['username', 'team_score', 'total_questions', 'correct_questions']
+        fields = ['username', 'team_rank', 'team_score', 'total_questions', 'correct_questions']
     
     def get_team_score(self, obj):
         return obj.max_streak + obj.team_score
+    
+    def get_team_rank(self, obj):
+        teams = CustomUser.objects.filter(senior_team=obj.senior_team).order_by('-team_score')
+        team_rank = list(teams).index(obj) + 1
+        return 1
     
 
 class SubmissionSerializer(serializers.ModelSerializer):

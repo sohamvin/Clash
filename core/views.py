@@ -431,7 +431,7 @@ class EncodedDataView(APIView):
                 else:
                     return Response({"Error": "Lifeline not available or already used"}, status=status.HTTP_403_FORBIDDEN)
             else:
-                if int(user.question_streak) >= 4:
+                if int(user.max_streak) >= 4:
                     li = []
                     li.append(user.current_question)
                     questions_list_str = user.Questions_to_list
@@ -702,7 +702,7 @@ class AllLifelines(APIView):
             b4 = False
             
             if not streak:
-                if user.question_streak >= 4:
+                if user.max_streak >= 4:
                     b4 = True
             
             payload = {
