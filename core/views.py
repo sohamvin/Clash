@@ -63,8 +63,8 @@ def end_time_exceeded(request):
 
 
 class UserRegistrationView(APIView):
-    # authentication_classes = [TokenAuthentication]
-    # permission_classes = [permissions.IsAdminUser]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAdminUser]
     def post(self, request):
         # DO NOT TOUCH, this serializer has this field compulsion
         # if not request.data.get('teammate_two'):
