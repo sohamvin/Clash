@@ -5,3 +5,4 @@ google.genai
 psycopg2-binary
 django-cors-headers
 django-import-export
+requests

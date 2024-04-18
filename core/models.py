@@ -47,10 +47,10 @@ class CustomUserManager(BaseUserManager):
 
 
 class CustomUser(AbstractUser):
-    email = models.EmailField(unique=True)
+    email = models.EmailField(blank=True)
     username = models.CharField(max_length=256, unique=True) # overrided , but must be team name , not username of user
     teammate_one = models.CharField(max_length=300)
-    teammate_two = models.CharField(max_length=300)
+    teammate_two = models.CharField(max_length=300, blank=True)
     team_score = models.IntegerField(default=0)
     current_question = models.IntegerField(default=1, blank=False)
     previous_question = models.BooleanField(default=False, blank=False)

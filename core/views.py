@@ -22,6 +22,7 @@ from rest_framework import permissions
 # from rest_framework import generics
 import os
 from dotenv import load_dotenv
+import requests
 # import requests
 load_dotenv()
 import google.generativeai as genai
@@ -66,11 +67,11 @@ class UserRegistrationView(APIView):
     # permission_classes = [permissions.IsAdminUser]
     def post(self, request):
         # DO NOT TOUCH, this serializer has this field compulsion
-        if not request.data.get('teammate_two'):
-            request.data['teammate_two'] = ''
+        # if not request.data.get('teammate_two'):
+        #     request.data['teammate_two'] = ''
         
-        if not request.data.get('email'):
-            request.data['email'] = ''
+        # if not request.data.get('email'):
+        #     request.data['email'] = ''
 
         ser = UserRegistrationSerializer(data=request.data)
 
@@ -89,6 +90,32 @@ class UserLoginView(APIView):
                 username = ser.validated_data['username']
                 password = ser.validated_data['password']
                 user = authenticate(username=username, password=password, request=request)
+                
+                if not user:
+                    # url = 'https://admin.credenz.in/api/verify/user/'
+                    url = "http://192.168.141.139:8000/api/verify/user/"
+                    headers= {'Content-Type':'application/json'}
+                    
+                    data={
+                        'username':username,
+                        'password':password,
+                        'event':"Clash",
+                        'is_team':'false'
+                    }
+                    
+                    if is_team:
+                        data['is_team']='true'
+                        
+                    response =  requests.post(url,headers=headers,json=data)
+                    
+                    print(response.json())
+                    
+                    return
+                    
+                    if response.status_code == 200:
+                        response = response.json()
+                        
+                    
 
                 if user.submitted == True:
                     return Response({"message": "Submitted"}, status=status.HTTP_208_ALREADY_REPORTED)
