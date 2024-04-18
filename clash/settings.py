@@ -138,13 +138,11 @@ GRAPH_MODELS ={
 'graph_models': True,
 }
 
-CORS_ALLOWED_ORIGINS = [
-    # "http://127.0.0.1:8000",
-    # "http://localhost:8000",
-    # "http://127.0.0.1:3000",
-    # "http://localhost:3000",
-    # "http://127.0.0.1:5173",
-    # "http://localhost:5173",
+CORS_ORIGIN_WHITELIST = [
+    'https://clash.credenz.in',
+    'https://api.clash.credenz.in',
+]
+CSRF_TRUSTED_ORIGINS = [
     'https://clash.credenz.in',
     'https://api.clash.credenz.in',
 ]
