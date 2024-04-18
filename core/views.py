@@ -375,7 +375,7 @@ class ResultPageView(APIView):
                 "overall_score": user.team_score + user.max_streak,
                 "total_questions": user.total_questions,
                 "correct_questions": user.correct_questions,
-                "user_accuracy": accuracy,
+                "user_accuracy": round(accuracy, 2),
             }
 
             response = Response(result_page_data, status=status.HTTP_200_OK)
