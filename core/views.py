@@ -92,8 +92,9 @@ class UserLoginView(APIView):
                 user = authenticate(username=username, password=password, request=request)
                 
                 if not user:
-                    # url = 'https://admin.credenz.in/api/verify/user/'
-                    url = "http://192.168.141.139:8000/api/verify/user/"
+                    print("user not found")
+                    url = 'https://admin.credenz.in/api/verify/user/'
+                    # url = "http://127.0.0.1:8001/api/verify/user/"
                     headers= {'Content-Type':'application/json'}
                     
                     data={
@@ -104,18 +105,48 @@ class UserLoginView(APIView):
                     }
                     
                     if is_team:
+                        print("helllllo")
                         data['is_team']='true'
                         
                     response =  requests.post(url,headers=headers,json=data)
                     
+                    print(response.status_code)
                     print(response.json())
                     
-                    return
                     
                     if response.status_code == 200:
                         response = response.json()
-                        
+                        username_two = ''
+                        if not is_team:
+                            try:
+                                isSenior = response['user']['senior']
+                                username_one = response['user']['username']
+                            except Exception as e:
+                                return Response({"message": "Bad Credentials"}, status=status.HTTP_400_BAD_REQUEST)
+                        else: # if team
+                            isSenior = response['users'][0]['senior']
+                            username_one = response['users'][0]['username']
+                            username_two = response['users'][1]['username']
+
+                        try:
+                            serializer  = serializer = UserRegistrationSerializer(data={
+                                                            'username': username,
+                                                            'password': password,
+                                                            'senior_team': isSenior,
+                                                            'teammate_one': username_one,
+                                                            'teammate_two': username_two
+                                                        })
+                            serializer.is_valid()
+                            serializer.save()
+                            user = serializer.instance
+                        except Exception as e:
+                            print(e)
+                            return Response({"message": "User not Found"}, status=status.HTTP_404_NOT_FOUND)
+
+                    else:  
+                        return Response({"message": "Bad Credentials"}, status=status.HTTP_404_NOT_FOUND)
                     
+                
 
                 if user.submitted == True:
                     return Response({"message": "Submitted"}, status=status.HTTP_208_ALREADY_REPORTED)

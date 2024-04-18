@@ -1,0 +1,36 @@
+version: "3.2"
+
+services:
+    nginx:
+        build: ./nginx
+        volumes:
+            - static_files:/user/src/app/static/
+        ports:
+            - "80:80"
+        depends_on:
+            - backend
+        restart: "on-failure"
+
+    # app:
+    #     image: "jc21/nginx-proxy-manager:latest"
+    #     restart: unless-stopped
+    #     ports:
+    #         - "80:80"
+    #         - "81:81"
+    #         - "443:443"
+    #     volumes:
+    #         - ./data:/data
+    #         - ./letsencrypt:/etc/letsencrypt
+
+    backend:
+        command: sh -c "python manage.py makemigrations &&
+            python manage.py migrate &&
+            python manage.py collectstatic --no-input &&
+            gunicorn clash.wsgi:application --bind 0.0.0.0:8000 -w 3"
+        build: .
+        volumes:
+            - static_files:/user/src/app/static/
+            - ./db.sqlite3:/user/src/app/db.sqlite3
+
+volumes:
+    static_files:
