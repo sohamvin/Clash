@@ -148,6 +148,28 @@ class UserLoginView(APIView):
                     
                 
 
+                if user.Questions_to_list == '':
+                    if user.senior_team:
+                        senior_objs = Mcq.objects.filter(senior=True)
+                        seniorlist = [senior_obj.question_id for senior_obj in senior_objs]
+                        random.shuffle(seniorlist)
+                        random_question_id = random.choice(seniorlist)
+                        seniorlist.remove(random_question_id)
+                        user.current_question = random_question_id
+                        strs = ",".join(map(str, seniorlist))
+                        user.Questions_to_list = strs
+                    else:
+                        junior_objs = Mcq.objects.filter(senior=False)
+                        juniorlist = [junior_obj.question_id for junior_obj in junior_objs]
+                        random_question_id = random.choice(juniorlist)
+                        random.shuffle(juniorlist)
+                        juniorlist.remove(random_question_id)
+                        user.current_question = random_question_id
+                        strs = ",".join(map(str, juniorlist))
+                        user.Questions_to_list = strs
+
+                        user.save()
+
                 if user.submitted == True:
                     return Response({"message": "Submitted"}, status=status.HTTP_208_ALREADY_REPORTED)
                 if user.tab_switch > 3:
@@ -362,7 +384,6 @@ class SubmitView(APIView):
                 return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
             else:
                 return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
-                
                 
             
 
