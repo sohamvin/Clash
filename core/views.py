@@ -20,17 +20,15 @@ from django.utils import timezone
 from .Streak import function
 from rest_framework import permissions
 # from rest_framework import generics
-# import os
-# from dotenv import load_dotenv
+import os
+from dotenv import load_dotenv
 # import requests
-# load_dotenv()
+load_dotenv()
 import google.generativeai as genai
 
 pointer = 0
 
-# arr= [str(os.getenv("GEMINI_KEY1")), str(os.getenv("GEMINI_KEY"))]
-
-arr = ["AIzaSyB-76akHNTENYJ_ZH9X2-XFdP2ZNxWT3SM"]
+key_arr = [str(os.getenv("GEMINI_KEY")), str(os.getenv("GEMINI_KEY1")), str(os.getenv("GEMINI_KEY2")), str(os.getenv("GEMINI_KEY3")), str(os.getenv("GEMINI_KEY4")), str(os.getenv("GEMINI_KEY5")), str(os.getenv("GEMINI_KEY6")), str(os.getenv("GEMINI_KEY7"))]
 
 
 User = get_user_model()
@@ -41,7 +39,7 @@ POSTIVE_MARKS_2 = 2
 NEGATIVE_MARKS_1 = -2
 NEGATIVE_MARKS_2 = -1
 
-SKIP_QUESTION_POSITIVE = 1
+SKIP_QUESTION_POTIVE = 1
 SKIP_QUESTION_NEGATIVE = -1
 
 
@@ -552,7 +550,7 @@ class ChatView(APIView):
                     ser = MessageSerializer(gpt, many=False)
                     return Response(ser.data, status=status.HTTP_200_OK)
                 else:
-                    return Response({"message": "Cannot access"}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"message": "Lifeline not available or already used"}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 bot_message = self.getgemini(user_message)
                 payload_to_serializer = {
@@ -582,7 +580,7 @@ class ChatView(APIView):
                     ser = MessageSerializer(gpt, many=False)
                     return Response(ser.data, status=status.HTTP_200_OK)
                 else:
-                    return Response({"message": "Cannot access"}, status=status.HTTP_400_BAD_REQUEST) 
+                    return Response({"message": "Lifeline already used"}, status=status.HTTP_400_BAD_REQUEST) 
             else:
                 return Response({"message": "use the lifeline first"}, status=status.HTTP_400_BAD_REQUEST)           
         else:
@@ -594,14 +592,14 @@ class ChatView(APIView):
 
     def getgemini(self, messg):
         global pointer
-        # genai.configure(api_key=arr[pointer])
-        genai.configure(api_key= "AIzaSyBWFXFRlzVnNQAtM9DZ5cFdfKPWSwi4GUI")
 
-        pointer = (pointer+1)%len(arr)
+        genai.configure(api_key = key_arr[pointer])
 
+        pointer = (pointer+1)%(int(os.getenv('SIZE')))
+        print(key_arr)
         model = genai.GenerativeModel('gemini-pro')
 
-        print(arr[0])
+        print(key_arr[0])
 
         response = model.generate_content(str(messg) + ". also, when you send the response dont use the ** or such operators."
                                                      "send a continuous string as response")
