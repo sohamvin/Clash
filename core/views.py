@@ -90,32 +90,28 @@ class UserLoginView(APIView):
                 username = ser.validated_data['username']
                 password = ser.validated_data['password']
                 user = authenticate(username=username, password=password, request=request)
-                
-                if not user:
-                    # url = 'https://admin.credenz.in/api/verify/user/'
-                    url = "http://192.168.141.139:8000/api/verify/user/"
-                    headers= {'Content-Type':'application/json'}
-                    
-                    data={
-                        'username':username,
-                        'password':password,
-                        'event':"Clash",
-                        'is_team':'false'
-                    }
-                    
-                    if is_team:
-                        data['is_team']='true'
-                        
-                    response =  requests.post(url,headers=headers,json=data)
-                    
-                    print(response.json())
-                    
-                    return
-                    
-                    if response.status_code == 200:
-                        response = response.json()
-                        
-                    
+
+                if user.Questions_to_list == '':
+                    if user.senior_team:
+                        senior_objs = Mcq.objects.filter(senior=True)
+                        seniorlist = [senior_obj.question_id for senior_obj in senior_objs]
+                        random.shuffle(seniorlist)
+                        random_question_id = random.choice(seniorlist)
+                        seniorlist.remove(random_question_id)
+                        user.current_question = random_question_id
+                        strs = ",".join(map(str, seniorlist))
+                        user.Questions_to_list = strs
+                    else:
+                        junior_objs = Mcq.objects.filter(senior=False)
+                        juniorlist = [junior_obj.question_id for junior_obj in junior_objs]
+                        random_question_id = random.choice(juniorlist)
+                        random.shuffle(juniorlist)
+                        juniorlist.remove(random_question_id)
+                        user.current_question = random_question_id
+                        strs = ",".join(map(str, juniorlist))
+                        user.Questions_to_list = strs
+
+                user.save()
 
                 if user.submitted == True:
                     return Response({"message": "Submitted"}, status=status.HTTP_208_ALREADY_REPORTED)
@@ -331,7 +327,6 @@ class SubmitView(APIView):
                 return Response({"message": "time over"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
             else:
                 return Response({"message": "submitted"}, status=status.HTTP_307_TEMPORARY_REDIRECT)
-                
                 
             
 

@@ -58,7 +58,7 @@ class CustomUser(AbstractUser):
     max_streak = models.IntegerField(default=0)
     question_level = models.IntegerField(default=0)
     senior_team = models.BooleanField(default=False)
-    Questions_to_list = models.TextField(default="NOTHING")
+    Questions_to_list = models.TextField(default='')
     total_questions = models.IntegerField(default=0, blank=False)
     correct_questions = models.IntegerField(default=0, blank=False)
     is_first_visit = models.BooleanField(default=True, blank=False) # to set the end_time at first visit
