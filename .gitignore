@@ -2,6 +2,7 @@
 static
 new_api.txt
 api_documentation.yaml
+.vscode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
