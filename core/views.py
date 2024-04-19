@@ -119,12 +119,12 @@ class UserLoginView(APIView):
                         username_two = ''
                         if not is_team:
                             try:
-                                isSenior = response['user']['senior']
+                                isSenior = response['user']['senior'] == 'true'
                                 username_one = response['user']['username']
                             except Exception as e:
                                 return Response({"message": "Bad Credentials"}, status=status.HTTP_400_BAD_REQUEST)
                         else: # if team
-                            isSenior = response['users'][0]['senior']
+                            isSenior = response['users'][0]['senior'] == 'true'
                             username_one = response['users'][0]['username']
                             username_two = response['users'][1]['username']
 
